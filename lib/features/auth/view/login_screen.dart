@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../constants.dart';
 import '../controller/login_controller.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
-
-  // ألوان هوية تطبيق السائق
-  static const Color primary = Color(0xff0d3e46); // زيتي غامق
-  static const Color accent = Color(0xfffbc02d); // أصفر خردلي
-  static const Color background = Color(0xfff7f9fa);
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +14,7 @@ class LoginScreen extends StatelessWidget {
     final formKey = GlobalKey<FormState>();
 
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
@@ -34,14 +30,14 @@ class LoginScreen extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: const BoxDecoration(
-                        color: primary,
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
                       child: const Text('م',
                           style: TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.bold,
-                              color: accent)),
+                              color: AppColors.accent)),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -49,7 +45,7 @@ class LoginScreen extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: primary)),
+                          color: AppColors.primary)),
                   const SizedBox(height: 8),
                   const Text('أدخل رقم هاتفك وكلمة المرور للمتابعة.',
                       style: TextStyle(fontSize: 14, color: Colors.grey)),
@@ -60,7 +56,7 @@ class LoginScreen extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: primary)),
+                          color: AppColors.primary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: controller.phoneController,
@@ -77,7 +73,7 @@ class LoginScreen extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: primary)),
+                          color: AppColors.primary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: controller.passwordController,
@@ -104,7 +100,7 @@ class LoginScreen extends StatelessWidget {
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
+                          backgroundColor: AppColors.accent,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -118,7 +114,7 @@ class LoginScreen extends StatelessWidget {
                               )
                             : const Text('تسجيل الدخول',
                                 style: TextStyle(
-                                    color: primary,
+                                    color: AppColors.primary,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold)),
                       ),
@@ -151,7 +147,7 @@ class LoginScreen extends StatelessWidget {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primary, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
     );
   }

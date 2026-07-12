@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../constants.dart';
 import '../controller/notifications_controller.dart';
 import '../model/notification_model.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
-
-  // ألوان الشاشة (هوية السائق)
-  static const Color background = Color(0xfff7f9fa);
-  static const Color unreadBackground = Color(0xFFFFFDF6);
-  static const Color primary = Color(0xff0d3e46);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color accent = Color(0xfffbc02d);
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +17,9 @@ class NotificationsScreen extends StatelessWidget {
       child: GetBuilder<NotificationsController>(
         initState: (_) => Get.find<NotificationsController>().fetchNotifications(),
         builder: (controller) => Scaffold(
-          backgroundColor: background,
+          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: background,
+            backgroundColor: AppColors.background,
             elevation: 0,
             automaticallyImplyLeading: false,
             title: Row(
@@ -35,13 +29,13 @@ class NotificationsScreen extends StatelessWidget {
                   onPressed: controller.markAllAsRead,
                   child: const Text('تحديد الكل كمقروء',
                       style: TextStyle(
-                          color: primary,
+                          color: AppColors.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.bold)),
                 ),
                 const Text('الإشعارات',
                     style: TextStyle(
-                        color: primary, fontSize: 18, fontWeight: FontWeight.bold)),
+                        color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 40),
               ],
             ),
@@ -58,7 +52,7 @@ class NotificationsScreen extends StatelessWidget {
     }
     if (controller.notifications.isEmpty) {
       return const Center(
-          child: Text('لا توجد إشعارات', style: TextStyle(color: textGrey)));
+          child: Text('لا توجد إشعارات', style: TextStyle(color: AppColors.textGrey)));
     }
     return RefreshIndicator(
       onRefresh: controller.fetchNotifications,
@@ -74,7 +68,7 @@ class NotificationsScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: item.isRead ? Colors.white : unreadBackground,
+        color: item.isRead ? Colors.white : AppColors.unreadBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -91,7 +85,7 @@ class NotificationsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  color: primary, borderRadius: BorderRadius.circular(12)),
+                  color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
               child: const Icon(Icons.notifications_outlined,
                   color: Colors.white, size: 24),
             ),
@@ -102,13 +96,13 @@ class NotificationsScreen extends StatelessWidget {
                 children: [
                   Text(item.title,
                       style: const TextStyle(
-                          color: primary,
+                          color: AppColors.primary,
                           fontSize: 15,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Text(item.body,
                       style: const TextStyle(
-                          color: textGrey, fontSize: 13, height: 1.4)),
+                          color: AppColors.textGrey, fontSize: 13, height: 1.4)),
                 ],
               ),
             ),
@@ -119,7 +113,7 @@ class NotificationsScreen extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration:
-                    const BoxDecoration(color: accent, shape: BoxShape.circle),
+                    const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
               ),
             ],
           ],
