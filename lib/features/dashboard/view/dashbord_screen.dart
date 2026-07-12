@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controller/pending_rides_controller.dart';
+import '../model/pending_ride_model.dart';
 import '../../ride_request/view/ride_request_dialog.dart';
 
 // الموديل (الوعاء اللي بيشيل البيانات)
@@ -20,6 +23,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final PendingRidesController _pendingRidesController = Get.find<PendingRidesController>();
   bool isOnline = true;
   final List<StatItem> stats = [
     StatItem(title: 'ساعات الاتصال', value: '3:42 س'),
@@ -35,6 +39,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       valueColor: const Color(0xFF00B4A0),
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pendingRidesController.fetchPendingRides();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +79,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         isOnline = !isOnline;
                       });
 
-                      // هنا نضع شرط الربط:
-                      // إذا تغيرت الحالة إلى "متصل"، نظهر النافذة
                       if (isOnline) {
-                        showRideRequest(context);
+                        final firstRide = _pendingRidesController.pendingRides.isNotEmpty
+                            ? _pendingRidesController.pendingRides.first
+                            : null;
+                        if (firstRide != null) {
+                          showRideRequest(context, firstRide);
+                        } else {
+                          Get.snackbar('معلومة', 'لا توجد طلبات واردة حالياً',
+                              backgroundColor: Colors.amber.shade100,
+                              snackPosition: SnackPosition.BOTTOM);
+                        }
                       }
                     },
                     child: _buildTopCard(
@@ -157,7 +174,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _buildStatCard(stats[index]),
                   ),
                   const SizedBox(height: 20),
-                  _buildLastTripCard(),
+                  GetBuilder<PendingRidesController>(
+                    builder: (controller) => _buildLastTripCard(
+                      controller.pendingRides.isNotEmpty
+                          ? controller.pendingRides.first
+                          : null,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -215,7 +238,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLastTripCard() {
+  Widget _buildLastTripCard(PendingRideModel? ride) {
+    final title = ride == null
+        ? 'لا توجد طلبات واردة حالياً'
+        : 'طلب وارد #${ride.id} • ${ride.estimatedFare.toStringAsFixed(0)} ل.س';
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -224,11 +251,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          Icon(Icons.arrow_back_ios, size: 14, color: Colors.grey),
-          Text(
-            'آخر رحلة ٧,٢٠٠ ل.س',
-            style: TextStyle(fontWeight: FontWeight.bold),
+        children: [
+          const Icon(Icons.arrow_back_ios, size: 14, color: Colors.grey),
+          Flexible(
+            child: Text(
+              title,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

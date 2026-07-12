@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:new_app/features/register/controller/register_controller.dart';
 import 'dart:async';
 import '../../dashboard/view/dashbord_screen.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key});
+  final String phone;
+  const OtpScreen({super.key, required this.phone});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -12,6 +15,8 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   int _seconds = 30;
   late Timer _timer;
+  final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   @override
   void initState() {
@@ -34,7 +39,31 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void dispose() {
     _timer.cancel();
+    for (final controller in _otpControllers) {
+      controller.dispose();
+    }
+    for (final node in _focusNodes) {
+      node.dispose();
+    }
     super.dispose();
+  }
+
+  String get _code => _otpControllers.map((controller) => controller.text.trim()).join();
+
+  void _onOtpChanged(String value, int index) {
+    if (value.isEmpty && index > 0) {
+      _focusNodes[index - 1].requestFocus();
+      return;
+    }
+
+    if (value.length == 1 && index < _focusNodes.length - 1) {
+      _focusNodes[index + 1].requestFocus();
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final registerController = Get.find<RegisterController>();
+    await registerController.verifyOtp(widget.phone, _code);
   }
 
   @override
@@ -76,10 +105,10 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'أرسلنا رمزاً مكوناً من 6 أرقام إلى\n+963 * * 963',
+            Text(
+              'أرسلنا رمزاً مكوناً من 6 أرقام إلى\n${widget.phone}',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 40),
 
@@ -93,9 +122,12 @@ class _OtpScreenState extends State<OtpScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     height: 55,
                     child: TextField(
+                      controller: _otpControllers[index],
+                      focusNode: _focusNodes[index],
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       maxLength: 1,
+                      onChanged: (value) => _onOtpChanged(value, index),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -153,31 +185,35 @@ class _OtpScreenState extends State<OtpScreen> {
               ],
             ),
             const SizedBox(height: 50), // زر تأكيد
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DashboardScreen(),
+            GetBuilder<RegisterController>(
+              builder: (registerController) => SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: registerController.isLoading ? null : _verifyOtp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFB822),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFB822),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
                   ),
-                ),
-                child: const Text(
-                  'تأكيد',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  child: registerController.isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Text(
+                          'تأكيد',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ),

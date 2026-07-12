@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:new_app/features/dashboard/view/dashbord_screen.dart';
+import 'package:new_app/features/login/model/user_model.dart';
 
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/storage/app_storage.dart';
 import '../../notifications/view/notifications_screen.dart';
-import '../model/user_model.dart';
 
 /// كنترولر تسجيل الدخول (بأسلوب GetBuilder).
 /// المتغيّرات عادية بدون .obs، ونستدعي update() عند تغيّرها.
@@ -53,8 +53,7 @@ class LoginController extends GetxController {
           user = UserModel.fromJson(data['user']);
         }
 
-        // ننتقل لشاشة الإشعارات (نستبدل الشاشة الحالية).
-        Get.offAll(() => DashboardScreen());
+        Get.offAll(() => const DashboardScreen());
       },
     );
   }

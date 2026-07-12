@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../active_trip/view/active_trip_screen.dart';
+import '../../dashboard/model/pending_ride_model.dart';
 
-void showRideRequest(BuildContext context) {
+void showRideRequest(BuildContext context, PendingRideModel ride) {
   showDialog(
     context: context,
     barrierDismissible: false, // لا يُغلق إلا بالضغط على قبول أو رفض
@@ -27,21 +28,23 @@ void showRideRequest(BuildContext context) {
                   child: Text('أ', style: TextStyle(color: Colors.white)),
                 ),
                 const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'أحمد العلي',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ride.customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'زبون منذ ٣:٤٢ رحلة',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
+                      Text(
+                        'التقييم: ${ride.ratingAverage.toStringAsFixed(1)} ★',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -62,8 +65,8 @@ void showRideRequest(BuildContext context) {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildInfoColumn('إلى العميل', '١.٢ كم'),
-                _buildInfoColumn('مسافة الرحلة', '١٨.٤ كم'),
+                _buildInfoColumn('المسافة', '${ride.distanceKm.toStringAsFixed(1)} كم'),
+                _buildInfoColumn('الوجهة', ride.destinationAddress),
               ],
             ),
             const SizedBox(height: 10),
@@ -75,14 +78,14 @@ void showRideRequest(BuildContext context) {
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'الأجرة المتوقعة',
                     style: TextStyle(color: Color(0xFF00B4A0)),
                   ),
                   Text(
-                    '١٢,٥٠٠ ل.س',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    '${ride.estimatedFare.toStringAsFixed(0)} ل.س',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
               ),
