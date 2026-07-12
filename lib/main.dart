@@ -5,7 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'constants.dart';
 import 'core/app_binding.dart';
 import 'core/storage/app_storage.dart';
-import 'features/auth/view/login_screen.dart';
+import 'features/login/view/login_screen.dart';
 import 'features/notifications/view/notifications_screen.dart';
 
 Future<void> main() async {

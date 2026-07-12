@@ -1,0 +1,350 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../../trip_receipt/view/trip_receipt_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class LiveTripScreen extends StatefulWidget {
+  const LiveTripScreen({super.key});
+
+  @override
+  State<LiveTripScreen> createState() => _LiveTripScreenState();
+}
+
+class _LiveTripScreenState extends State<LiveTripScreen> {
+  Timer? _tripTimer;
+  int _elapsedSeconds = 872; // بادئين من 14 دقيقة و32 ثانية متل الصورة
+  double _distance = 8.2; // المسافة الحالية كم
+  int _fare = 7420; // الأجرة الحالية بالليرة السورية
+
+  @override
+  void initState() {
+    super.initState();
+    _startTripTracking();
+  }
+
+  void _startTripTracking() {
+    _tripTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _elapsedSeconds++;
+        // محاكاة بسيطة لزيادة المسافة والأجرة أثناء حركة السيارة
+        if (_elapsedSeconds % 5 == 0) {
+          _distance += 0.1;
+          _fare += 150;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _tripTimer?.cancel();
+    super.dispose();
+  }
+
+  // دالة لتنسيق الوقت لشكل (دقائق:ثواني)
+  String _formatDuration(int totalSeconds) {
+    int minutes = totalSeconds ~/ 60;
+    int seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color tealColor = Color(
+      0xFF00B4A0,
+    ); // التيركواز الأساسي للشريط والتعليمات
+    const Color orangeColor = Color(0xFFFFB822); // الأصفر لزر إنهاء الرحلة
+    const Color darkBlue = Color(0xFF0F3A46); // لون لوحة الأجرة الغامق
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // 1. خلفية الخريطة
+          Container(
+            color: Colors.grey.shade200,
+            child: const Center(
+              child: Icon(Icons.map, size: 100, color: Colors.grey),
+            ),
+          ),
+
+          // 2. لوحة إحصائيات الرحلة العلوية (الأجرة، المسافة، الوقت)
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // العداد (المدة)
+                    _buildStatColumn('المدة', _formatDuration(_elapsedSeconds)),
+
+                    // خط فاصل عمودي ناعم
+                    Container(
+                      width: 1,
+                      height: 35,
+                      color: Colors.grey.shade300,
+                    ),
+
+                    // المسافة
+                    _buildStatColumn(
+                      'المسافة',
+                      '${_distance.toStringAsFixed(1)} كم',
+                    ),
+
+                    // خط فاصل عمودي ناعم
+                    Container(
+                      width: 1,
+                      height: 35,
+                      color: Colors.grey.shade300,
+                    ),
+
+                    // الأجرة الحالية (يساراً بالتصميم)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'الأجرة حتى الآن',
+                          style: TextStyle(color: Colors.grey, fontSize: 11),
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            const Text(
+                              ' ل.س',
+                              style: TextStyle(
+                                color: darkBlue,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              _fare.toString().replaceAllMapped(
+                                RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                                (Match m) => '${m[1]},',
+                              ),
+                              style: const TextStyle(
+                                color: tealColor,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 3. شارة الإشعار الصغيرة تحت اللوحة "الرحلة جارية مع أحمد"
+          Positioned(
+            top: 115,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: darkBlue,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text(
+                      'الرحلة جارية . مع أحمد',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    CircleAvatar(radius: 4, backgroundColor: tealColor),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 4. زر الطوارئ SOS العائم فوق كرت الوجهة
+          Positioned(
+            bottom: 225,
+            right: 16,
+            child: FloatingActionButton.small(
+              onPressed: () async {
+                final Uri launchUri = Uri(scheme: 'tel', path: '112');
+                if (await canLaunchUrl(launchUri)) {
+                  await launchUrl(launchUri);
+                  // TODO: Send critical trip SOS event to server للربط
+                }
+              },
+              backgroundColor: Colors.red.shade600,
+              elevation: 4,
+              child: const Text(
+                'SOS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ),
+
+          // 5. البطاقة البيضاء السفلية (الوجهة وزر الإنهاء)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+                boxShadow: [BoxShadow(color: Colors.black, blurRadius: 10)],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // خط السحب العلوي المعتاد
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // تفاصيل الوجهة المقصودة
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: const [
+                          Text(
+                            'الوجهة . ٥.٤ كم متبقية',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'مطار دمشق الدولي . صالة المغادرة',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: orangeColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.flag_rounded,
+                          color: orangeColor,
+                          size: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // زر "إنهاء الرحلة" الأصفر الكبير
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _tripTimer?.cancel();
+                        // TODO: Open Receipt and Payment Screen للربط
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TripReceiptScreen(),
+                          ),
+                        );
+                      },
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: orangeColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'إنهاء الرحلة',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ويدجت داخلي لبناء خانات الإحصائيات (المدة والمسافة)
+  Widget _buildStatColumn(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
