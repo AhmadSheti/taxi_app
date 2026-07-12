@@ -41,6 +41,13 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # ─── حزم الربط (State Management + API) ───
+  get: ^4.6.6                # GetX: إدارة الحالة + التنقل + حقن الـ Controllers
+  dio: ^5.7.0               # عميل HTTP لإرسال الطلبات
+  dartz: ^0.10.1            # يوفّر Either (Left = خطأ / Right = نجاح)
+  get_storage: ^2.1.1       # تخزين محلي بسيط (نحفظ فيه التوكن)
+  pretty_dio_logger: ^1.4.0 # طباعة تفاصيل كل طلب في الـ console (للتصحيح)
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

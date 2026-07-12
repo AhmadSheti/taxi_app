@@ -1,0 +1,108 @@
+import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+
+import '../storage/app_storage.dart';
+import 'api_constants.dart';
+import 'api_method.dart';
+
+/// خدمة الاتصال بالسيرفر.
+/// - Singleton: نسخة واحدة فقط في كل التطبيق (ApiService.instance).
+/// - makeRequest: الدالة الوحيدة التي نستخدمها لأي طلب.
+///   ترجع Either:
+///     Left(String)  = رسالة خطأ
+///     Right(dynamic) = بيانات النجاح (JSON)
+class ApiService {
+  ApiService._() {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        validateStatus: (status) => status != null && status <= 500,
+      ),
+    );
+
+    // Interceptor يضيف التوكن تلقائياً لكل طلب (لو المستخدم مسجّل دخول)،
+    // ويطبع تفاصيل الطلب في الـ console للمساعدة في التصحيح.
+    _dio.interceptors.addAll([
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final token = AppStorage.token;
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+      PrettyDioLogger(requestBody: true, responseBody: true),
+    ]);
+  }
+
+  static final ApiService instance = ApiService._();
+  late final Dio _dio;
+
+  Future<Either<String, dynamic>> makeRequest({
+    required ApiMethod method,
+    required String endPoint,
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? queryParams,
+  }) async {
+    try {
+      Response response;
+      switch (method) {
+        case ApiMethod.get:
+          response = await _dio.get(endPoint, queryParameters: queryParams);
+          break;
+        case ApiMethod.post:
+          response = await _dio.post(endPoint, data: body, queryParameters: queryParams);
+          break;
+        case ApiMethod.put:
+          response = await _dio.put(endPoint, data: body, queryParameters: queryParams);
+          break;
+        case ApiMethod.patch:
+          response = await _dio.patch(endPoint, data: body, queryParameters: queryParams);
+          break;
+        case ApiMethod.delete:
+          response = await _dio.delete(endPoint, data: body, queryParameters: queryParams);
+          break;
+      }
+
+      final statusCode = response.statusCode ?? 0;
+      // نجاح: أي كود بين 200 و 299
+      if (statusCode >= 200 && statusCode < 300) {
+        return Right(response.data);
+      }
+      // خطأ: نحاول قراءة رسالة الخطأ من السيرفر
+      return Left(_extractMessage(response.data, statusCode));
+    } on DioException catch (e) {
+      if (e.response != null) {
+        return Left(_extractMessage(e.response!.data, e.response!.statusCode ?? 0));
+      }
+      return Left(e.message ?? 'حدث خطأ في الاتصال بالشبكة');
+    } catch (e) {
+      return Left(e.toString());
+    }
+  }
+
+  // يستخرج رسالة الخطأ من رد السيرفر، أو رسالة افتراضية حسب الكود.
+  String _extractMessage(dynamic data, int statusCode) {
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    switch (statusCode) {
+      case 401:
+        return 'غير مصرّح لك، سجّل الدخول مجدداً';
+      case 404:
+        return 'العنصر غير موجود';
+      case 500:
+        return 'خطأ في السيرفر';
+      default:
+        return 'فشل الطلب';
+    }
+  }
+}

@@ -1,27 +1,40 @@
 import 'package:flutter/material.dart';
-import 'splash_screen.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
-void main() {
+import 'core/app_binding.dart';
+import 'core/storage/app_storage.dart';
+import 'features/auth/view/login_screen.dart';
+import 'features/notifications/view/notifications_screen.dart';
+
+Future<void> main() async {
+  // نُهيّئ التخزين المحلي قبل تشغيل التطبيق (ضروري لـ get_storage).
+  await GetStorage.init();
   runApp(const MishwarDriverApp());
 }
 
 class MishwarDriverApp extends StatelessWidget {
-  const MishwarDriverApp({Key? key}) : super(key: key);
+  const MishwarDriverApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+    // GetMaterialApp (بدل MaterialApp) لتفعيل تنقّل GetX.
+    return GetMaterialApp(
       title: 'مشوار سائق',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // إعدادات الألوان حسب التصميم
-        primaryColor: const Color(0xff0d3e46), // اللون الزيتي الغامق
-        scaffoldBackgroundColor: const Color(0xfff7f9fa), // الخلفية الفاتحة للتطبيق
+        primaryColor: const Color(0xff0d3e46),
+        scaffoldBackgroundColor: const Color(0xfff7f9fa),
         colorScheme: ColorScheme.fromSwatch().copyWith(
-          secondary: const Color(0xfffbc02d), // اللون الأصفر الخردلي للأزرار
+          secondary: const Color(0xfffbc02d),
         ),
       ),
-      home:SplashScreen(), // البداية من شاشة الـ Splash
+      // كل الـ Controllers تُحقن هنا مرة واحدة عند بدء التطبيق.
+      initialBinding: AppBinding(),
+      // إذا كان السائق مسجّل دخول نفتح الإشعارات مباشرة، وإلا شاشة الدخول.
+      home: AppStorage.isLoggedIn
+          ? const NotificationsScreen()
+          : const LoginScreen(),
     );
   }
 }
