@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../features/auth/controller/login_controller.dart';
+import '../features/login/controller/login_controller.dart';
 import '../features/notifications/controller/notifications_controller.dart';
 
 /// مكان واحد لحقن كل الـ Controllers.
