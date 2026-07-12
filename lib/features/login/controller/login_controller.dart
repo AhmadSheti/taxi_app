@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:new_app/features/home/view/home_screen.dart';
 
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
@@ -44,8 +45,7 @@ class LoginController extends GetxController {
           backgroundColor: Colors.red.shade100,
           snackPosition: SnackPosition.BOTTOM),
       (data) async {
-        // شكل الرد المتوقع: { "token": "...", "user": { ... } }
-        final token = data['token'] ?? data['access_token'];
+        final token = data['token'];
         await AppStorage.saveToken(token.toString());
 
         if (data['user'] != null) {
@@ -53,7 +53,7 @@ class LoginController extends GetxController {
         }
 
         // ننتقل لشاشة الإشعارات (نستبدل الشاشة الحالية).
-        Get.offAll(() => const NotificationsScreen());
+        Get.offAll(() => const HomeScreen());
       },
     );
   }
