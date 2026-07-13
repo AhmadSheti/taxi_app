@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../trip_receipt/view/trip_receipt_screen.dart';
+import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../ride_request/controller/ride_request_controller.dart';
+import '../../trip_receipt/view/trip_receipt_screen.dart';
 
 class LiveTripScreen extends StatefulWidget {
   const LiveTripScreen({super.key});
@@ -12,9 +14,11 @@ class LiveTripScreen extends StatefulWidget {
 
 class _LiveTripScreenState extends State<LiveTripScreen> {
   Timer? _tripTimer;
+  Timer? _trackingTimer;
   int _elapsedSeconds = 872; // بادئين من 14 دقيقة و32 ثانية متل الصورة
   double _distance = 8.2; // المسافة الحالية كم
   int _fare = 7420; // الأجرة الحالية بالليرة السورية
+  final int _rideId = 501;
 
   @override
   void initState() {
@@ -33,11 +37,21 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
         }
       });
     });
+
+    _trackingTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      final controller = Get.find<RideRequestController>();
+      await controller.sendTracking(
+        _rideId,
+        latitude: 33.5150,
+        longitude: 36.2740,
+      );
+    });
   }
 
   @override
   void dispose() {
     _tripTimer?.cancel();
+    _trackingTimer?.cancel();
     super.dispose();
   }
 
@@ -288,15 +302,25 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         _tripTimer?.cancel();
-                        // TODO: Open Receipt and Payment Screen للربط
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TripReceiptScreen(),
-                          ),
+                        _trackingTimer?.cancel();
+
+                        final controller = Get.find<RideRequestController>();
+                        await controller.completeRide(
+                          _rideId,
+                          distanceKm: _distance,
+                          durationMinutes: _elapsedSeconds ~/ 60,
                         );
+
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TripReceiptScreen(),
+                            ),
+                          );
+                        }
                       },
 
                       style: ElevatedButton.styleFrom(

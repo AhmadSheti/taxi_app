@@ -1,8 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../driver_earning/view/driver_earning_screen.dart';
+import '../../ride_request/controller/ride_request_controller.dart';
 
-class TripReceiptScreen extends StatelessWidget {
+class TripReceiptScreen extends StatefulWidget {
   const TripReceiptScreen({super.key});
+
+  @override
+  State<TripReceiptScreen> createState() => _TripReceiptScreenState();
+}
+
+class _TripReceiptScreenState extends State<TripReceiptScreen> {
+  final RideRequestController controller = Get.find<RideRequestController>();
+  final int _rideId = 501;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.getRideDetails(_rideId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,9 +50,7 @@ class TripReceiptScreen extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     child: IconButton(
                       icon: const Icon(Icons.close, color: Colors.grey),
-
                       onPressed: () {
-                        // TODO: Close screen and return to map dashboard
                         Navigator.of(context).pop();
                       },
                     ),
@@ -200,16 +214,17 @@ class TripReceiptScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DriverEarningsScreen(),
-                          ),
-                          (route) => false,
-                        );
-
-                        // TODO: Commit financial transaction and clear state
+                      onPressed: () async {
+                        await controller.confirmPayment(_rideId);
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DriverEarningsScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: tealColor,

@@ -1,8 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../company_commission/view/company_commission_screen.dart';
-
-class DriverEarningsScreen extends StatelessWidget {
+import '../controller/driver_earnings_controller.dart';
+class DriverEarningsScreen extends StatefulWidget {
   const DriverEarningsScreen({super.key});
+
+  @override
+  State<DriverEarningsScreen> createState() => _DriverEarningsScreenState();
+}
+
+class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
+  final DriverEarningsController _controller = Get.find<DriverEarningsController>();
+  String _selectedPeriod = 'week';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await _controller.fetchEarningsSummary(_selectedPeriod);
+    await _controller.fetchEarningsChart(_selectedPeriod);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,88 +74,107 @@ class DriverEarningsScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildTabButton('الكل', false),
-                _buildTabButton('الشهر', false),
-                _buildTabButton('الأسبوع', true, activeColor: tealColor),
-                _buildTabButton('اليوم', false),
+                _buildTabButton('all', 'الكل', _selectedPeriod == 'all', tealColor),
+                _buildTabButton('month', 'الشهر', _selectedPeriod == 'month', tealColor),
+                _buildTabButton('week', 'الأسبوع', _selectedPeriod == 'week', tealColor),
+                _buildTabButton('today', 'اليوم', _selectedPeriod == 'today', tealColor),
               ],
             ),
             const SizedBox(height: 20),
 
-            // 2. كرت إجمالي أرباح الأسبوع
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEDF7F6), // تيركواز فاتح جداً للخلفية
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: const [
-                      Text(
-                        'أرباح هذا الأسبوع',
-                        style: TextStyle(
-                          color: tealColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+            // 2. كرت ملخص الأرباح من API
+            GetBuilder<DriverEarningsController>(
+              builder: (controller) {
+                final summary = controller.summary;
+                final earnings = summary?.totalEarnings ?? 0;
+                final ridesCount = summary?.ridesCount ?? 0;
+                final distance = summary?.totalDistanceKm ?? 0;
+                final avgRide = summary?.averagePerRide ?? 0;
+                final commission = summary?.commissionOwed ?? 0;
+                final periodLabel = summary?.period.isNotEmpty == true ? summary!.period : _selectedPeriod;
+
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDF7F6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'إجمالي الأرباح',
+                                style: TextStyle(
+                                  color: tealColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'الفترة: $periodLabel',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Icon(
+                            Icons.account_balance_wallet_outlined,
+                            color: tealColor,
+                            size: 20,
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.account_balance_wallet_outlined,
-                        color: tealColor,
-                        size: 16,
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          const Text(
+                            'ل.س ',
+                            style: TextStyle(
+                              color: darkBlue,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            earnings == 0 ? '...' : earnings.toStringAsFixed(0),
+                            style: const TextStyle(
+                              color: darkBlue,
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSmallSummary('رحلات', ridesCount.toString(), tealColor),
+                          _buildSmallSummary('المسافة', '${distance.toStringAsFixed(1)} كم', darkBlue),
+                          _buildSmallSummary('متوسط', 'ل.س ${avgRide.toStringAsFixed(0)}', darkBlue),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      controller.isLoading
+                          ? const CircularProgressIndicator(
+                              color: tealColor,
+                            )
+                          : const SizedBox(height: 0),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: const [
-                      Text(
-                        ' ل.س',
-                        style: TextStyle(
-                          color: darkBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '٣٢٤,٧٥٠',
-                        style: TextStyle(
-                          color: darkBlue,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        'مقابل الأسبوع الماضي',
-                        style: TextStyle(color: Colors.grey, fontSize: 11),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        '١٢٪ +',
-                        style: TextStyle(
-                          color: tealColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Icon(Icons.arrow_upward, color: tealColor, size: 12),
-                    ],
-                  ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 20),
 
@@ -165,25 +204,48 @@ class DriverEarningsScreen extends StatelessWidget {
                   const SizedBox(height: 25),
 
                   // رسم أعمدة المخطط البياني ببساطة مذهلة
-                  SizedBox(
-                    height: 80,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _buildBarChartColumn(45, false),
-                        _buildBarChartColumn(60, false),
-                        _buildBarChartColumn(35, false),
-                        _buildBarChartColumn(
-                          80,
-                          true,
-                          barColor: tealColor,
-                        ), // اليوم الأعلى ربحاً
-                        _buildBarChartColumn(50, false),
-                        _buildBarChartColumn(65, false),
-                        _buildBarChartColumn(40, false),
-                      ],
-                    ),
+                  GetBuilder<DriverEarningsController>(
+                    builder: (controller) {
+                      final chartData = controller.chartData;
+                      if (controller.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (chartData.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'لا توجد بيانات للمخطط',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        );
+                      }
+                      final maxEarnings = chartData
+                          .map((item) => item.earnings)
+                          .fold<double>(0, (prev, value) => value > prev ? value : prev);
+                      return SizedBox(
+                        height: 100,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: chartData.map((item) {
+                            final height = maxEarnings > 0
+                                ? (item.earnings / maxEarnings) * 80
+                                : 0;
+                            return Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                _buildBarChartColumn(height, false,
+                                    barColor: tealColor),
+                                const SizedBox(height: 6),
+                                Text(
+                                  item.date.split('T').first,
+                                  style: const TextStyle(fontSize: 9, color: Colors.grey),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -224,20 +286,28 @@ class DriverEarningsScreen extends StatelessWidget {
   }
 
   // ويدجت داخلي لبناء أزرار شريط التصفية
-  Widget _buildTabButton(String label, bool isActive, {Color? activeColor}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? activeColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: isActive ? null : Border.all(color: Colors.grey.shade200),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isActive ? Colors.white : Colors.grey.shade600,
-          fontSize: 13,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+  Widget _buildTabButton(String value, String title, bool isActive, Color activeColor) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPeriod = value;
+        });
+        _loadData();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: isActive ? null : Border.all(color: Colors.grey.shade200),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.grey.shade600,
+            fontSize: 13,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ),
     );
@@ -287,6 +357,27 @@ class DriverEarningsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSmallSummary(String title, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(color: Colors.grey, fontSize: 11),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../ride_request/controller/ride_request_controller.dart';
 import '../../waiting_customer/view/waiting_customer_screen.dart';
 
 class ActiveTripScreen extends StatelessWidget {
@@ -303,13 +305,17 @@ class ActiveTripScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const WaitingCustomerScreen(),
-                          ),
-                        );
+                      onPressed: () async {
+                        final controller = Get.find<RideRequestController>();
+                        await controller.markArrived(501);
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const WaitingCustomerScreen(),
+                            ),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: orangeColor,

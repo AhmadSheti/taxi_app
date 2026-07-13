@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
 import '../../driver_ratings/view/driver_ratings_screen.dart';
+import '../controller/trip_history_controller.dart';
+import '../model/trip_history_model.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -9,14 +13,24 @@ class TripHistoryScreen extends StatefulWidget {
 }
 
 class _TripHistoryScreenState extends State<TripHistoryScreen> {
-  // الألوان المعتمدة بتطبيق مشوار
+  final TripHistoryController _controller = Get.find<TripHistoryController>();
   final Color tealColor = const Color(0xFF00B4A0);
   final Color darkBlue = const Color(0xFF0D3E46);
   final Color bgLight = const Color(0xFFF7F9FA);
 
-  // المتغير المسؤول عن التبويب النشط حالياً
   int selectedTab = 0;
-  final List<String> tabs = ['الكل', 'مكتملة', 'ملغاة', 'مرفوضة'];
+  final List<String> tabs = ['الكل', 'مكتملة', 'ملغاة'];
+  final List<String> statusValues = ['all', 'completed', 'cancelled'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrips();
+  }
+
+  Future<void> _loadTrips() async {
+    await _controller.fetchTripHistory(status: statusValues[selectedTab]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,21 +65,21 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          //  شريط التبويبات1..
           Container(
             height: 45,
             margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              reverse: true, // عشان يبدأ الترتيب العربي من اليمين لليسار
+              reverse: true,
               itemCount: tabs.length,
               itemBuilder: (context, index) {
-                bool isActive = selectedTab == index;
+                final isActive = selectedTab == index;
                 return GestureDetector(
                   onTap: () {
                     setState(() {
                       selectedTab = index;
                     });
+                    _loadTrips();
                   },
                   child: Container(
                     margin: const EdgeInsets.only(left: 8),
@@ -92,96 +106,29 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               },
             ),
           ),
-
-          // 2. قائمة الرحلات (List of Trips)
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // قسم: اليوم
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
+            child: GetBuilder<TripHistoryController>(
+              builder: (controller) {
+                if (controller.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.trips.isEmpty) {
+                  return const Center(
                     child: Text(
-                      'اليوم',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'لا توجد رحلات حتى الآن',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                  ),
-                  _buildTripCard(
-                    name: 'أحمد العلي',
-                    initials: 'أ',
-                    avatarColor: const Color(0xFF1F5E6B),
-                    route: 'المالكي ← مطار دمشق',
-                    timeInfo: 'منذ ١٤ دقيقة',
-                    rating: '٥.٠',
-                    price: '١١,٢٥٠ ل.س',
-                    status: 'مكتملة',
-                    statusColor: tealColor,
-                  ),
-                  _buildTripCard(
-                    name: 'ليلى مرعي',
-                    initials: 'ل',
-                    avatarColor: const Color(0xFF9B6BFF),
-                    route: 'شارع بغداد ← باب توما',
-                    timeInfo: '٩:١٢ ص',
-                    rating: '٤.٠',
-                    price: '٢,٤٣٠ ل.س',
-                    status: 'مكتملة',
-                    statusColor: tealColor,
-                  ),
-                  _buildTripCard(
-                    name: 'ماجد الحلو',
-                    initials: 'م',
-                    avatarColor: const Color(0xFF4AC2CD),
-                    route: 'الزاهرة ← دمر',
-                    timeInfo: '٨:٢٠ ص',
-                    rating: '', // لا يوجد تقييم للمرفوضة
-                    price: 'تجاوز ١٥ ثانية',
-                    status: 'مرفوضة',
-                    statusColor: const Color(0xFFFFB822),
-                  ),
-
-                  // قسم: أمس
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Text(
-                      'أمس',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  _buildTripCard(
-                    name: 'خليل العطار',
-                    initials: 'خ',
-                    avatarColor: const Color(0xFFF39C12),
-                    route: 'الجامعة ← المهاجرين',
-                    timeInfo: '٨:٠١ م',
-                    rating: '٥.٠',
-                    price: '٣,٢٠٠ ل.س',
-                    status: 'مكتملة',
-                    statusColor: tealColor,
-                  ),
-                  _buildTripCard(
-                    name: 'سلمى الديب',
-                    initials: 'س',
-                    avatarColor: const Color(0xFFE74C3C),
-                    route: 'القصاع ← مشروع دمر',
-                    timeInfo: '٤:١٥ م',
-                    rating: '',
-                    price: 'ملغاة من العميل',
-                    status: 'ملغاة',
-                    statusColor: const Color(0xFFE74C3C),
-                  ),
-                ],
-              ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  itemCount: controller.trips.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    return _buildTripCard(controller.trips[index]);
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -189,20 +136,19 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     );
   }
 
-  //ويدجت داخلي لبناء كرت الرحلة
-  Widget _buildTripCard({
-    required String name,
-    required String initials,
-    required Color avatarColor,
-    required String route,
-    required String timeInfo,
-    required String rating,
-    required String price,
-    required String status,
-    required Color statusColor,
-  }) {
+  Widget _buildTripCard(TripHistoryModel trip) {
+    final statusColor = trip.status == 'completed'
+        ? tealColor
+        : trip.status == 'cancelled'
+            ? const Color(0xFFE74C3C)
+            : Colors.grey;
+
+    final formattedFare = trip.finalFare.toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (match) => ',',
+    );
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -216,20 +162,39 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. تفاصيل الحالة والسعر (يسار الكرت)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      trip.customerName,
+                      style: TextStyle(
+                        color: darkBlue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${trip.pickupAddress} ← ${trip.destinationAddress}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  status,
+                  trip.status,
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 10,
@@ -237,73 +202,25 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
-              Text(
-                price,
-                style: TextStyle(
-                  fontSize: price.contains('ل.س') ? 14 : 11,
-                  fontWeight: price.contains('ل.س')
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                  color: price.contains('ل.س') ? tealColor : Colors.grey,
-                ),
-              ),
             ],
           ),
-
-          const Spacer(),
-          // 2. تفاصيل العميل والمسار والوقت (يمين الكرت)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                name,
+                'الأجرة: ل.س $formattedFare',
                 style: TextStyle(
                   color: darkBlue,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
               Text(
-                route,
+                trip.completedAt.split('T').first,
                 style: const TextStyle(color: Colors.grey, fontSize: 11),
               ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (rating.isNotEmpty) ...[
-                    Text(
-                      rating,
-                      style: const TextStyle(color: Colors.grey, fontSize: 10),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.star, color: Color(0xFFFFB822), size: 12),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    timeInfo,
-                    style: const TextStyle(color: Colors.grey, fontSize: 10),
-                  ),
-                ],
-              ),
             ],
-          ),
-          const SizedBox(width: 12),
-
-          // 3. الآفاتار (صورة الحرف الدائرية)
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: avatarColor,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../active_trip/view/active_trip_screen.dart';
 import '../../dashboard/model/pending_ride_model.dart';
+import '../controller/ride_request_controller.dart';
 
 void showRideRequest(BuildContext context, PendingRideModel ride) {
+  final controller = Get.find<RideRequestController>();
+
   showDialog(
     context: context,
     barrierDismissible: false, // لا يُغلق إلا بالضغط على قبول أو رفض
@@ -97,7 +101,12 @@ void showRideRequest(BuildContext context, PendingRideModel ride) {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () async {
+                      await controller.rejectRide(ride.id);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
                     child: const Text(
                       'رفض',
                       style: TextStyle(color: Colors.black),
@@ -107,15 +116,17 @@ void showRideRequest(BuildContext context, PendingRideModel ride) {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ActiveTripScreen(),
-                        ),
-                      );
+                    onPressed: () async {
+                      await controller.acceptRide(ride.id);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActiveTripScreen(),
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF80CBC4),

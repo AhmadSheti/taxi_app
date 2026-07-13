@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../live_trip/view/live_trip_screen.dart';
+import 'package:get/get.dart';
+import '../../active_trip/view/active_trip_screen.dart';
+import '../../ride_request/controller/ride_request_controller.dart';
 
 class WaitingCustomerScreen extends StatefulWidget {
   const WaitingCustomerScreen({super.key});
@@ -241,14 +243,19 @@ class _WaitingCustomerScreenState extends State<WaitingCustomerScreen> {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         _timer?.cancel();
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LiveTripScreen(),
-                          ),
-                        );
+                        final controller = Get.find<RideRequestController>();
+                        await controller.startRide(501);
+                        await controller.getRideDetails(501);
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ActiveTripScreen(),
+                            ),
+                          );
+                        }
                       },
 
                       style: ElevatedButton.styleFrom(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controller/availability_controller.dart';
 import '../controller/pending_rides_controller.dart';
 import '../model/pending_ride_model.dart';
 import '../../ride_request/view/ride_request_dialog.dart';
@@ -24,7 +25,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final PendingRidesController _pendingRidesController = Get.find<PendingRidesController>();
-  bool isOnline = true;
+  final AvailabilityController _availabilityController = Get.find<AvailabilityController>();
   final List<StatItem> stats = [
     StatItem(title: 'ساعات الاتصال', value: '3:42 س'),
     StatItem(title: 'رحلات اليوم', value: '7 رحلة'),
@@ -74,12 +75,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     'أرباح اليوم: ٤٥,٠٠٠ ل.س',
                   ),
                   GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isOnline = !isOnline;
-                      });
+                    onTap: () async {
+                      await _availabilityController.toggleAvailability();
 
-                      if (isOnline) {
+                      if (_availabilityController.isOnline) {
                         final firstRide = _pendingRidesController.pendingRides.isNotEmpty
                             ? _pendingRidesController.pendingRides.first
                             : null;
@@ -92,10 +91,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         }
                       }
                     },
-                    child: _buildTopCard(
-                      Icons.circle,
-                      isOnline ? 'مُتصل' : 'غير متصل',
-                      color: isOnline ? const Color(0xFF00B4A0) : Colors.grey,
+                    child: GetBuilder<AvailabilityController>(
+                      builder: (controller) => _buildTopCard(
+                        Icons.circle,
+                        controller.isOnline ? 'مُتصل' : 'غير متصل',
+                        color: controller.isOnline ? const Color(0xFF00B4A0) : Colors.grey,
+                      ),
                     ),
                   ),
                 ],
