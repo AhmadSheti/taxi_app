@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
 import '../../../constants.dart'; // استدعاء ملف الثوابت والألوان مباشرة
 import '../../trip_in_progress/view/trip_in_progress_screen.dart';
+import '../controller/driver_arrived_controller.dart';
 
 class DriverArrivedScreen extends StatelessWidget {
-  const DriverArrivedScreen({Key? key}) : super(key: key);
+  final int rideId;
+
+  const DriverArrivedScreen({Key? key, required this.rideId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(DriverArrivedController(rideId: rideId));
+
     return Directionality(
       textDirection: TextDirection.rtl, // دعم الاتجاه العربي بالكامل
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
+        body: GetBuilder<DriverArrivedController>(
+          builder: (controller) {
+            return Stack(
           children: [
             // 1. خريطة خلفية وهمية
             Container(
@@ -19,14 +28,10 @@ class DriverArrivedScreen extends StatelessWidget {
               width: double.infinity,
               height: double.infinity,
               child: const Center(
-                child: Icon(
-                  Icons.map,
-                  size: 80,
-                  color: AppColors.primaryTeal,
-                ),
+                child: Icon(Icons.map, size: 80, color: AppColors.primaryTeal),
               ),
             ),
-            
+
             // 2. بطاقة البيانات السفلية
             Positioned(
               bottom: 0,
@@ -45,7 +50,7 @@ class DriverArrivedScreen extends StatelessWidget {
                       color: Colors.black12,
                       blurRadius: 10,
                       spreadRadius: 2,
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
@@ -61,11 +66,11 @@ class DriverArrivedScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    
+
                     // عنوان الحالة الرئيسي
-                    const Text(
-                      "السائق وصل!",
-                      style: TextStyle(
+                    Text(
+                      controller.statusLabel,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -73,9 +78,11 @@ class DriverArrivedScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      "ابحث عن السيارة برقم اللوحة أدناه",
-                      style: TextStyle(
+                    Text(
+                      controller.statusLabel == 'السائق وصل'
+                          ? 'ابحث عن السيارة برقم اللوحة أدناه'
+                          : 'تحديث حالة الرحلة...',
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 14,
                         color: AppColors.textSecondary,
@@ -85,15 +92,23 @@ class DriverArrivedScreen extends StatelessWidget {
 
                     // رسائل التواصل السريعة المكتوبة مسبقاً من السائق
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber[50],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.secondaryAmber.withOpacity(0.3)),
+                        border: Border.all(
+                          color: AppColors.secondaryAmber.withOpacity(0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.chat_bubble_outline, color: AppColors.secondaryAmber),
+                          const Icon(
+                            Icons.chat_bubble_outline,
+                            color: AppColors.secondaryAmber,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -119,16 +134,21 @@ class DriverArrivedScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 26,
-                              backgroundColor: AppColors.primaryTeal.withOpacity(0.1),
-                              child: const Icon(Icons.directions_car, color: AppColors.primaryTeal, size: 28),
+                              backgroundColor: AppColors.primaryTeal
+                                  .withOpacity(0.1),
+                              child: const Icon(
+                                Icons.directions_car,
+                                color: AppColors.primaryTeal,
+                                size: 28,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  "سامر - كيا سيراتو",
-                                  style: TextStyle(
+                                Text(
+                                  '${controller.driverName} - ${controller.vehicleName}',
+                                  style: const TextStyle(
                                     fontFamily: 'Cairo',
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -136,17 +156,19 @@ class DriverArrivedScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Row(
-                                  children: const [
-                                    Icon(Icons.star, color: AppColors.secondaryAmber, size: 16),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      "4.9",
-                                      style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                                  children: [
+                                    const Icon(
+                                      Icons.star,
+                                      color: AppColors.secondaryAmber,
+                                      size: 16,
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      "فضية",
-                                      style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: AppColors.textSecondary),
+                                      controller.rating,
+                                      style: const TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -156,24 +178,31 @@ class DriverArrivedScreen extends StatelessWidget {
                         ),
                         // رقم اللوحة المصمم كبطاقة ترخيص مرورية
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            border: Border.all(color: AppColors.textMain, width: 1.5),
+                            border: Border.all(
+                              color: AppColors.textMain,
+                              width: 1.5,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
-                            children: const [
+                            children: [
                               Text(
-                                "DAM 4128",
-                                style: TextStyle(
+                                controller.plateNumber,
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1,
                                 ),
                               ),
-                              Text(
-                                "دمشق",
+                              const SizedBox(height: 2),
+                              const Text(
+                                "لوحة السيارة",
                                 style: TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 10,
@@ -203,7 +232,9 @@ class DriverArrivedScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) =>  TripInProgressScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => TripInProgressScreen(rideId: rideId),
+                            ),
                           );
                         },
                         child: const Text(

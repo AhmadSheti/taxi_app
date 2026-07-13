@@ -9,6 +9,22 @@ class AppColors {
     0xFFFFB627,
   ); // اللون الثانوي: ذهبي/أصفر لأزرار التفاعل (CTAs)
 
+  static const Color primaryDark = Color(
+    0xFF0F4C5C,
+  ); // لون داكن متوافق مع الهوية للمكالمات والأسطح الداكنة
+
+  static const Color accentYellow = Color(
+    0xFFFFB627,
+  ); // لون نبرة منبه مع هوية العلامة
+
+  static const Color textGrey = Color(0xFF7A7A8C); // لون نصوص الوصف الثانوية
+
+  static const Color textDark = Color(0xFF1A1A2E); // لون نصوص العناوين الداكنة
+
+  static const Color cardBackground = Color(
+    0xFFFFFFFF,
+  ); // لون خلفية البطاقات البيضاء
+
   // 2. ألوان الحالات والمؤشرات (Status Colors)
   static const Color success = Color(
     0xFF2EC4B6,

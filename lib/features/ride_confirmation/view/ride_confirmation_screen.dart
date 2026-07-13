@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../constants.dart';
+import '../controller/ride_confirmation_controller.dart';
 
-class RideConfirmationScreen extends StatelessWidget {
+class RideConfirmationScreen extends StatefulWidget {
   const RideConfirmationScreen({Key? key}) : super(key: key);
+
+  @override
+  State<RideConfirmationScreen> createState() => _RideConfirmationScreenState();
+}
+
+class _RideConfirmationScreenState extends State<RideConfirmationScreen> {
+  late final RideConfirmationController _controller;
 
   // ألوان الهوية البصرية الرسمية لتطبيق "مشوار"
   final Color primaryTeal = const Color(0xFF0F4C5C);
@@ -12,6 +21,13 @@ class RideConfirmationScreen extends StatelessWidget {
   final Color textMain = const Color(0xFF1A1A2E);
   final Color textSecondary = const Color(0xFF7A7A8C);
   final Color backgroundLight = const Color(0xFFF8F9FA);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.put(RideConfirmationController());
+    _controller.validateDiscount();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,30 +180,53 @@ class RideConfirmationScreen extends StatelessWidget {
 
   // 2. إشعار الخصم الأخضر
   Widget _buildPromoCodeAlert() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: successGreen.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: successGreen.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle, color: successGreen, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'MISHWAR10 تم تطبيق كود خصم 10% على هذه الرحلة',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                color: textMain,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+    return GetBuilder<RideConfirmationController>(
+      builder: (controller) {
+        final discount = controller.discount;
+        final code = controller.discountCodeController.text.trim();
+
+        if (discount == null && controller.isValidatingDiscount) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: discount != null
+                ? successGreen.withOpacity(0.1)
+                : Colors.orange.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: discount != null
+                  ? successGreen.withOpacity(0.3)
+                  : Colors.orange.shade200,
             ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(
+                discount != null ? Icons.check_circle : Icons.info_outline,
+                color: discount != null ? successGreen : Colors.orange,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  discount != null
+                      ? '$code تم تطبيق كود خصم ${discount.discountPercentage}% على هذه الرحلة'
+                      : 'لم يتم التحقق من كود الخصم بعد',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    color: textMain,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -241,7 +280,11 @@ class RideConfirmationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInvoiceRow(String label, String value, {bool isDiscount = false}) {
+  Widget _buildInvoiceRow(
+    String label,
+    String value, {
+    bool isDiscount = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -311,48 +354,78 @@ class RideConfirmationScreen extends StatelessWidget {
 
   // 5. زر تأكيد الطلب
   Widget _buildConfirmButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: () {
-          // تأثير بصري مؤقت عند نجاح التأكيد
-          showDialog(
-            context: context,
-            builder: (context) => Directionality(
-              textDirection: TextDirection.rtl,
-              child: AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                title: const Text('تم إرسال الطلب', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-                content: const Text('جاري الاتصال بالسائق وتأكيد الرحلة معك...', style: TextStyle(fontFamily: 'Cairo')),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context); // إغلاق الحوار
-                      Navigator.pop(context); // العودة للشاشة السابقة
-                    },
-                    child: Text('حسناً', style: TextStyle(fontFamily: 'Cairo', color: primaryTeal, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
+    return GetBuilder<RideConfirmationController>(
+      builder: (controller) => SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: controller.isCreatingRide
+              ? null
+              : () async {
+                  await controller.createRide();
+                  if (controller.ride != null) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Directionality(
+                        textDirection: TextDirection.rtl,
+                        child: AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          title: const Text(
+                            'تم إرسال الطلب',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: Text(
+                            'تم إنشاء الرحلة بنجاح\nرقم الرحلة: ${controller.ride!.id}\nالحالة: ${controller.ride!.status}',
+                            style: const TextStyle(fontFamily: 'Cairo'),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.pop(context);
+                              },
+                              child: Text(
+                                'حسناً',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: primaryTeal,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: secondaryAmber,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: secondaryAmber,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
           ),
-        ),
-        child: Text(
-          'تأكيد الطلب',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            color: textMain,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          child: controller.isCreatingRide
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  'تأكيد الطلب',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    color: textMain,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
         ),
       ),
     );

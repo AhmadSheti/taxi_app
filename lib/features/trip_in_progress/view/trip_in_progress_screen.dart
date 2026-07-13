@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
 import '../../../constants.dart'; // استدعاء ملف الثوابت والألوان مباشرة
+import '../controller/trip_in_progress_controller.dart';
 
 class TripInProgressScreen extends StatelessWidget {
-  const TripInProgressScreen({Key? key}) : super(key: key);
+  final int rideId;
+
+  const TripInProgressScreen({Key? key, required this.rideId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(TripInProgressController(rideId: rideId));
+
     return Directionality(
       textDirection: TextDirection.rtl, // دعم الاتجاه العربي بالكامل
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
+        body: GetBuilder<TripInProgressController>(
+          builder: (controller) {
+            return Stack(
           children: [
             // 1. خريطة مسار الرحلة الحية الوهمية
             Container(
@@ -88,10 +97,10 @@ class TripInProgressScreen extends StatelessWidget {
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
-                              "الرحلة جارية",
-                              style: TextStyle(
+                              controller.statusLabel,
+                              style: const TextStyle(
                                 fontFamily: 'Cairo',
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -99,8 +108,8 @@ class TripInProgressScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              "الوصول بعد 12 دقيقة",
-                              style: TextStyle(
+                              controller.driverEta,
+                              style: const TextStyle(
                                 fontFamily: 'Cairo',
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
@@ -117,8 +126,8 @@ class TripInProgressScreen extends StatelessWidget {
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
-                            children: const [
-                              Text(
+                            children: [
+                              const Text(
                                 "الأجرة حتى الآن",
                                 style: TextStyle(
                                   fontFamily: 'Cairo',
@@ -128,8 +137,8 @@ class TripInProgressScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                "2640 ل.س",
-                                style: TextStyle(
+                                controller.fareText,
+                                style: const TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -160,10 +169,12 @@ class TripInProgressScreen extends StatelessWidget {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
-                                "09:42 · المزة، أمام مشفى الزهراء",
-                                style: TextStyle(
+                                controller.fromAddress.isNotEmpty
+                                    ? controller.fromAddress
+                                    : '09:42 · المزة، أمام مشفى الزهراء',
+                                style: const TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 13,
                                   color: AppColors.textSecondary,
@@ -171,10 +182,12 @@ class TripInProgressScreen extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               Text(
-                                "~09:54 · المالكي، شارع 29 أيار",
-                                style: TextStyle(
+                                controller.toAddress.isNotEmpty
+                                    ? controller.toAddress
+                                    : '~09:54 · المالكي، شارع 29 أيار',
+                                style: const TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,

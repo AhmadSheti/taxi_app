@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../constants.dart'; // استدعاء ملف الثوابت المباشر داخل الـ lib
 import '../../rate_driver/view/rate_driver_screen.dart'; // للاستدعاء عند الانتقال لصفحة التقييم
+import '../controller/payment_arrival_controller.dart';
 
 class PaymentArrivalScreen extends StatelessWidget {
-  const PaymentArrivalScreen({Key? key}) : super(key: key);
+  final int rideId;
+
+  const PaymentArrivalScreen({Key? key, required this.rideId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(PaymentArrivalController(rideId: rideId));
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -28,34 +34,49 @@ class PaymentArrivalScreen extends StatelessWidget {
         textDirection: TextDirection.rtl,
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 10),
-              // رسالة الوصول الترحيبية الودودة
-              const Text(
-                'وصلت بسلامة! 🎉',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F4C5C),
-                ),
-              ),
-              const Text(
-                'نتمنى لك يوماً سعيداً',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 14,
-                  color: Color(0xFF7A7A8C),
-                ),
-              ),
-              const SizedBox(height: 24),
+          child: GetBuilder<PaymentArrivalController>(
+            builder: (controller) {
+              if (controller.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-              // بطاقة تفاصيل السائق والمركبة
-              Container(
+              if (controller.hasError) {
+                return Center(
+                  child: Text(
+                    controller.errorMessage,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  // رسالة الوصول الترحيبية الودودة
+                  const Text(
+                    'وصلت بسلامة! 🎉',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F4C5C),
+                    ),
+                  ),
+                  const Text(
+                    'نتمنى لك يوماً سعيداً',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 14,
+                      color: Color(0xFF7A7A8C),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // بطاقة تفاصيل السائق والمركبة
+                  Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -80,18 +101,18 @@ class PaymentArrivalScreen extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            'سامر الحميص',
-                            style: TextStyle(
+                            controller.driverName.isNotEmpty ? controller.driverName : 'اسم السائق',
+                            style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1A1A2E),
                             ),
                           ),
                           Text(
-                            'كيا سيراتو · فضي',
-                            style: TextStyle(
+                            controller.driverCar.isNotEmpty ? controller.driverCar : 'المركبة',
+                            style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 12,
                               color: Color(0xFF7A7A8C),
@@ -101,14 +122,14 @@ class PaymentArrivalScreen extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding:  EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        'DAM 4128',
-                        style: TextStyle(
+                      child: Text(
+                        controller.plateNumber.isNotEmpty ? controller.plateNumber : 'رقم اللوحة',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1A1A2E),
                         ),
@@ -129,11 +150,11 @@ class PaymentArrivalScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildTripInfoRow('المسافة الفعلية', '4.2 كم'),
+                    _buildTripInfoRow('المسافة الفعلية', controller.distanceKm.isNotEmpty ? '${controller.distanceKm} كم' : '-'),
                     const Divider(height: 20),
-                    _buildTripInfoRow('المدة الزمنية', '14 دقيقة'),
+                    _buildTripInfoRow('المدة الزمنية', controller.durationMinutes.isNotEmpty ? '${controller.durationMinutes} دقيقة' : '-'),
                     const Divider(height: 20),
-                    _buildTripInfoRow('متوسط السرعة', '18 كم/س'),
+                    _buildTripInfoRow('المتوسط التقريبي', controller.distanceKm.isNotEmpty && controller.durationMinutes.isNotEmpty ? '${(double.tryParse(controller.distanceKm) != null && double.tryParse(controller.durationMinutes) != null ? ((double.parse(controller.distanceKm) / double.parse(controller.durationMinutes)) * 60).round() : 0)} كم/س' : '18 كم/س'),
                   ],
                 ),
               ),
@@ -159,15 +180,14 @@ class PaymentArrivalScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildInvoiceRow('الأجرة الأساسية', '2000 ل.س'),
-                      _buildInvoiceRow('المسافة (4.2 كم × 500)', '2100 ل.س'),
-                      _buildInvoiceRow('وقت الانتظار', '100 ل.س'),
-                      _buildInvoiceRow('خصم MISHWAR10', '-420 ل.س', isDiscount: true),
+                      _buildInvoiceRow('الأجرة الأساسية', controller.baseFare.isNotEmpty ? '${controller.baseFare} ل.س' : '-'),
+                      _buildInvoiceRow('التكلفة التقديرية', controller.estimatedFare.isNotEmpty ? '${controller.estimatedFare} ل.س' : '-'),
+                      _buildInvoiceRow('الخصم', controller.discountAmount.isNotEmpty ? '-${controller.discountAmount} ل.س' : '-'),
                       const Divider(height: 24, thickness: 1),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text(
+                        children: [
+                          const Text(
                             'المجموع النهائي',
                             style: TextStyle(
                               fontFamily: 'Cairo',
@@ -177,8 +197,8 @@ class PaymentArrivalScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '3780 ل.س',
-                            style: TextStyle(
+                            controller.finalFare.isNotEmpty ? '${controller.finalFare} ل.س' : '- ،',
+                            style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontWeight: FontWeight.w900,
                               fontSize: 18,

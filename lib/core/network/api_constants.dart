@@ -11,8 +11,25 @@ class EndPoints {
   // المصادقة
   static const String login = "api/auth/login";
   static const String register = "api/auth/register";
+  static const String verifyOtp = "api/auth/verify-otp";
+  static const String forgotPassword = "api/auth/forgot-password";
+  static const String savedPlaces = "api/customer/saved-places";
+  static const String carTypes = "api/customer/car-types";
+  static const String estimateRide = "api/customer/rides/estimate";
+  static const String availableDrivers = "api/customer/drivers/available";
+  static const String validateDiscountCode =
+      "api/customer/discount-codes/validate";
+  static const String createRide = "api/customer/rides";
+  static const String activeRide = "api/customer/rides/active";
+  static const String profile = "api/customer/profile";
+  static const String blockedDrivers = "api/customer/blocks";
+  static const String reports = "api/customer/reports";
+  static const String rideTracking = "api/customer/rides/";
+  static const String rideDetails = "api/customer/rides/";
+  static const String rideSos = "api/customer/rides/";
 
   // الإشعارات (خاصة بالعميل / customer)
   static const String notifications = "api/customer/notifications";
-  static const String notificationsReadAll = "api/customer/notifications/read-all";
+  static const String notificationsReadAll =
+      "api/customer/notifications/read-all";
 }

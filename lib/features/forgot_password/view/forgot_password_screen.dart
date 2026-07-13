@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+import '../controller/forgot_password_controller.dart';
+
+class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _phoneController = TextEditingController();
+  Widget build(BuildContext context) {
+    final controller = Get.put(ForgotPasswordController());
+    final formKey = GlobalKey<FormState>();
 
   // ثوابت الألوان الرسمية لتطبيق مشوار
   final Color primaryTeal = const Color(0xFF0F4C5C); // اللون الأساسي
   final Color accentGold = const Color(0xFFFFB627); // لون الأزرار والتنبيهات
   final Color darkText = const Color(0xFF1A1A2E); // لون النصوص الرئيسية
   final Color bgLight = const Color(0xFFF8F9FA); // لون الخلفية الهادئة
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Form(
-              key: _formKey,
+              key: formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -94,7 +88,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                   // حقل إدخال رقم الهاتف
                   TextFormField(
-                    controller: _phoneController,
+                    controller: controller.phoneController,
                     keyboardType: TextInputType.phone,
                     textAlign: TextAlign.right,
                     style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
@@ -119,24 +113,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          // إظهار رسالة نجاح مخصصة عند التحقق
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'تم إرسال رمز التحقق بنجاح',
-                                style: TextStyle(fontFamily: 'Cairo'),
-                              ),
-                              backgroundColor: primaryTeal,
-                            ),
-                          );
-
-                          // هنا يتم الانتقال إلى شاشة الـ OTP للتحقق من الهوية
-                          // Navigator.pushNamed(context, '/otp');
-                        }
-                      },
+                    child: GetBuilder<ForgotPasswordController>(
+                      builder: (c) => ElevatedButton(
+                        onPressed: c.isLoading
+                            ? null
+                            : () {
+                                if (formKey.currentState!.validate()) {
+                                  c.sendResetCode();
+                                }
+                              },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: accentGold,
                         elevation: 0,
@@ -144,15 +129,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text(
-                        'إرسال رمز التحقق',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: darkText, // نص متناسق مع اللون الذهبي
-                        ),
-                      ),
+                      child: c.isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              'إرسال رمز التحقق',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: darkText,
+                              ),
+                            ),
                     ),
                   ),
 

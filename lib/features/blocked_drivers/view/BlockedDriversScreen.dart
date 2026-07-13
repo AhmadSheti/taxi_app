@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controller/blocked_drivers_controller.dart';
 
 // ملاحظة: استبدل هذه الألوان بالثوابت الموجودة في ملف الثوابت الخاص بك
 class AppColors {
-  static const Color background = Color(0xFFF7F9FA);  // لون خلفية الصفحة
-  static const Color cardBackground = Colors.white;   // لون خلفية البطاقات البيضاء
-  static const Color textDark = Color(0xFF1A1A1A);       // لون النصوص الداكنة والعناوين
-  static const Color textGrey = Color(0xFF757575);       // لون النصوص الرمادية والوصف
-  static const Color primaryBlue = Color(0xFF0A4D5C);    // لون إطار زر إلغاء الحظر والنصوص الرئيسية
-  static const Color textRed = Color(0xFFEF5350);        // لون الدائرة الحمراء (يوسف)
-  static const Color textPurple = Color(0xFFAB47BC);     // لون الدائرة البنفسجية (خالد)
+  static const Color background = Color(0xFFF7F9FA); // لون خلفية الصفحة
+  static const Color cardBackground =
+      Colors.white; // لون خلفية البطاقات البيضاء
+  static const Color textDark = Color(
+    0xFF1A1A1A,
+  ); // لون النصوص الداكنة والعناوين
+  static const Color textGrey = Color(0xFF757575); // لون النصوص الرمادية والوصف
+  static const Color primaryBlue = Color(
+    0xFF0A4D5C,
+  ); // لون إطار زر إلغاء الحظر والنصوص الرئيسية
+  static const Color textRed = Color(0xFFEF5350); // لون الدائرة الحمراء (يوسف)
+  static const Color textPurple = Color(
+    0xFFAB47BC,
+  ); // لون الدائرة البنفسجية (خالد)
 }
 
 class BlockedDriversScreen extends StatelessWidget {
@@ -16,38 +25,72 @@ class BlockedDriversScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(BlockedDriversController());
+
     return Directionality(
       textDirection: TextDirection.rtl, // لضمان اتجاه الواجهة من اليمين لليسار
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: _buildAppBar(),
-        body: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          children: [
-            // بطاقة السائق الأول
-            _buildDriverCard(
-              name: 'يوسف الكردي',
-              reason: 'سبب الحظر: تأخره في الوصول',
-              date: 'تم الحظر في ١٢ مايو',
-              avatarLetter: 'ي',
-              avatarBgColor: AppColors.textRed,
-              onUnblockPressed: () {},
-            ),
-            
-            // بطاقة السائق الثاني
-            _buildDriverCard(
-              name: 'خالد المنير',
-              reason: 'سبب الحظر: سلوك غير لائق',
-              date: 'تم الحظر في ٥ مايو',
-              avatarLetter: 'خ',
-              avatarBgColor: AppColors.textPurple,
-              onUnblockPressed: () {},
-            ),
-            const SizedBox(height: 16),
-            
-            // التلميح السفلي للحماية والإرشاد
-            _buildInfoTipCard(),
-          ],
+        body: GetBuilder<BlockedDriversController>(
+          builder: (controller) {
+            if (controller.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (controller.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        controller.errorMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red, fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: controller.fetchBlockedDrivers,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                        ),
+                        child: const Text('حاول مرة أخرى'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: controller.blockedDrivers.length + 1,
+              itemBuilder: (context, index) {
+                if (index == controller.blockedDrivers.length) {
+                  return const SizedBox(height: 24);
+                }
+
+                final blockedDriver = controller.blockedDrivers[index];
+                final dateText = blockedDriver.blockedAt.isNotEmpty
+                    ? 'تم الحظر في ${blockedDriver.blockedAt}'
+                    : 'تاريخ الحظر غير متوفر';
+
+                return _buildDriverCard(
+                  name: blockedDriver.name,
+                  reason: 'سبب الحظر: ${blockedDriver.reason}',
+                  date: dateText,
+                  avatarLetter: blockedDriver.avatarLetter,
+                  avatarBgColor: index.isEven
+                      ? AppColors.textRed
+                      : AppColors.textPurple,
+                  onUnblockPressed: () =>
+                      controller.unblockDriver(blockedDriver.driverId),
+                );
+              },
+            );
+          },
         ),
       ),
     );
@@ -66,7 +109,9 @@ class BlockedDriversScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const SizedBox(width: 40), // موازن لمكان زر العودة ليبقى العنوان بالمنتصف
+              const SizedBox(
+                width: 40,
+              ), // موازن لمكان زر العودة ليبقى العنوان بالمنتصف
               const Text(
                 'السائقون المحظورون',
                 style: TextStyle(
@@ -82,7 +127,11 @@ class BlockedDriversScreen extends StatelessWidget {
                   border: Border.all(color: Colors.grey.withOpacity(0.1)),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios, color: AppColors.textDark, size: 16),
+                  icon: const Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.textDark,
+                    size: 16,
+                  ),
                   onPressed: () {},
                 ),
               ),
@@ -136,7 +185,10 @@ class BlockedDriversScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
               ),
               child: const Text(
                 'إلغاء الحظر',
@@ -148,7 +200,7 @@ class BlockedDriversScreen extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            
+
             // معلومات السائق النصية
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -180,7 +232,7 @@ class BlockedDriversScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 12),
-            
+
             // الصورة الرمزية الدائرية (الحرف الأول من الاسم)
             CircleAvatar(
               radius: 24,

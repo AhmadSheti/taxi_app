@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../controller/report_issue_controller.dart';
 
 // ملاحظة: استبدل هذه الألوان بالثوابت الموجودة في ملف الثوابت الخاص بك
 class AppColors {
@@ -38,6 +41,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   // متغير لحفظ السبب المختار (محاكاة للتصميم حيث "قيادة غير آمنة" مختار)
   String selectedReason = 'قيادة غير آمنة';
 
+  // بيانات الرحلة والسائق الثابتة المطلوبة في الطلب
+  final int _rideId = 501;
+  final int _reportedId = 12;
+
   // وحدة التحكم بنص الوصف
   final TextEditingController _descriptionController = TextEditingController(
     text:
@@ -45,44 +52,164 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   );
 
   @override
+  void dispose() {
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = Get.put(ReportIssueController());
+
     return Directionality(
-      textDirection: TextDirection.rtl, // لضمان اتجاه الواجهة من اليمين لليسار
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle('الرحلة المعنيّة'),
-                    const SizedBox(height: 8),
-                    _buildTripCard(),
-                    const SizedBox(height: 20),
+        body: GetBuilder<ReportIssueController>(
+          builder: (controller) {
+            if (controller.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-                    _buildSectionTitle('سبب البلاغ'),
-                    const SizedBox(height: 12),
-                    _buildReasonsGrid(),
-                    const SizedBox(height: 20),
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (controller.hasError &&
+                            controller.errorMessage.isNotEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Text(
+                              controller.errorMessage,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        if (controller.successMessage.isNotEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              controller.successMessage,
+                              style: const TextStyle(color: Colors.green),
+                            ),
+                          ),
+                        _buildSectionTitle('الرحلة المعنيّة'),
+                        const SizedBox(height: 8),
+                        _buildTripCard(),
+                        const SizedBox(height: 20),
 
-                    _buildSectionTitle('الوصف'),
-                    const SizedBox(height: 8),
-                    _buildDescriptionField(),
-                    const SizedBox(height: 16),
+                        _buildSectionTitle('سبب البلاغ'),
+                        const SizedBox(height: 12),
+                        _buildReasonsGrid(),
+                        const SizedBox(height: 20),
 
-                    _buildPrivacyInfoCard(),
-                  ],
+                        _buildSectionTitle('الوصف'),
+                        const SizedBox(height: 8),
+                        _buildDescriptionField(),
+                        const SizedBox(height: 16),
+
+                        _buildPrivacyInfoCard(),
+                        const SizedBox(height: 24),
+
+                        _buildSectionTitle('بلاغاتي'),
+                        const SizedBox(height: 12),
+                        _buildReportsList(controller),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            _buildSubmitButton(),
-          ],
+                _buildSubmitButton(controller),
+              ],
+            );
+          },
         ),
       ),
+    );
+  }
+
+  Widget _buildReportsList(ReportIssueController controller) {
+    if (controller.reports.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Text(
+          'لا يوجد بلاغات حتى الآن.',
+          style: TextStyle(color: AppColors.textGrey),
+        ),
+      );
+    }
+
+    return Column(
+      children: controller.reports.map((report) {
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'بلاغ رقم ${report.id}',
+                style: const TextStyle(
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'الحالة: ${report.status}',
+                style: const TextStyle(color: AppColors.textGrey, fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                report.description,
+                textAlign: TextAlign.right,
+                style: const TextStyle(color: AppColors.textDark, fontSize: 13),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -322,33 +449,40 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
   // زر إرسال البلاغ الثابت في الأسفل
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(ReportIssueController controller) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       child: SizedBox(
         width: double.infinity,
         height: 50,
         child: ElevatedButton(
-          onPressed: () {
-            // هنا يمكنك إضافة منطق إرسال البلاغ
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تم إرسال البلاغ بنجاح!')),
-            );
-          },
+          onPressed: controller.isSubmitting
+              ? null
+              : () {
+                  controller.submitReport(
+                    rideId: _rideId,
+                    reportedId: _reportedId,
+                    description: _descriptionController.text.trim(),
+                  );
+                },
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.buttonRed,
+            backgroundColor: controller.isSubmitting
+                ? AppColors.primaryBlue.withOpacity(0.4)
+                : AppColors.buttonRed,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
           ),
-          child: const Text(
-            'إرسال البلاغ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: controller.isSubmitting
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text(
+                  'إرسال البلاغ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
         ),
       ),
     );

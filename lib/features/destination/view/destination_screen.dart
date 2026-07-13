@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 // تأكد من تعديل مسار استيراد ملف الألوان بحسب مشروعك
 import '../../../constants.dart';
+import '../controller/destination_controller.dart';
 
 class DestinationScreen extends StatefulWidget {
   const DestinationScreen({Key? key}) : super(key: key);
- 
 
   @override
   State<DestinationScreen> createState() => _DestinationScreenState();
@@ -16,21 +17,14 @@ class _DestinationScreenState extends State<DestinationScreen> {
   );
   final TextEditingController _destinationController = TextEditingController();
 
-  // قائمة وهمية للأماكن المفضلة والمقترحة بحسب دليل الأسلوب
-  final List<Map<String, String>> _suggestedPlaces = [
-    {'title': 'المنزل', 'subtitle': 'مشروع دمر، الجزر الثامنة', 'icon': 'home'},
-    {'title': 'العمل', 'subtitle': 'تنظيم كفرسوسة، برج الشام', 'icon': 'work'},
-    {
-      'title': 'جامعة دمشق',
-      'subtitle': 'البرامكة، كلية الهندسة المعلوماتية',
-      'icon': 'history',
-    },
-    {
-      'title': 'بوابة الصالحية',
-      'subtitle': 'وسط المدينة، دمشق',
-      'icon': 'history',
-    },
-  ];
+  late final DestinationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.put(DestinationController());
+    _controller.loadSavedPlaces();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,60 +169,77 @@ class _DestinationScreenState extends State<DestinationScreen> {
 
               // 2. قائمة المواقع المقترحة والمفضلة
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  itemCount: _suggestedPlaces.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, color: Color(0xFFE4EEF1)),
-                  itemBuilder: (context, index) {
-                    final place = _suggestedPlaces[index];
-                    IconData iconData = Icons.history;
-                    if (place['icon'] == 'home') iconData = Icons.home_rounded;
-                    if (place['icon'] == 'work') iconData = Icons.work_rounded;
+                child: GetBuilder<DestinationController>(
+                  builder: (controller) {
+                    if (controller.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                    return ListTile(
-                      onTap: () {
-                        setState(() {
-                          _destinationController.text = place['title']!;
-                        });
+                    if (controller.savedPlaces.isEmpty) {
+                      return const Center(
+                        child: Text('لا توجد أماكن محفوظة حالياً'),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: controller.savedPlaces.length,
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1, color: Color(0xFFE4EEF1)),
+                      itemBuilder: (context, index) {
+                        final place = controller.savedPlaces[index];
+
+                        return ListTile(
+                          onTap: () {
+                            controller.selectPlace(place);
+                            _destinationController.text = place.title;
+                            setState(() {});
+                          },
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFE4EEF1),
+                            child: Icon(
+                              place.type == 'home'
+                                  ? Icons.home_rounded
+                                  : place.type == 'work'
+                                  ? Icons.work_rounded
+                                  : Icons.history,
+                              color: AppColors.primaryTeal,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            place.title,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textMain,
+                            ),
+                          ),
+                          subtitle: Text(
+                            place.subtitle.isEmpty
+                                ? 'مكان محفوظ'
+                                : place.subtitle,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        );
                       },
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 8,
-                      ),
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFE4EEF1),
-                        child: Icon(
-                          iconData,
-                          color: AppColors.primaryTeal,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(
-                        place['title']!,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textMain,
-                        ),
-                      ),
-                      subtitle: Text(
-                        place['subtitle']!,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 14,
-                        color: AppColors.textSecondary,
-                      ),
                     );
                   },
                 ),
@@ -243,16 +254,28 @@ class _DestinationScreenState extends State<DestinationScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_destinationController.text.isNotEmpty) {
-                        // هنا سنربط الانتقال إلى الشاشة (B) تأكيد نقطة الانطلاق لاحقاً
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'تم اختيار الوجهة: ${_destinationController.text}، جاري الانتقال لتأكيد الانطلاق...',
-                              style: const TextStyle(fontFamily: 'Cairo'),
+                        final selected = _controller.selectedPlace;
+                        if (selected != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'تم اختيار الوجهة: ${_destinationController.text}\nالإحداثيات: ${selected.latitude}, ${selected.longitude}',
+                                style: const TextStyle(fontFamily: 'Cairo'),
+                              ),
+                              backgroundColor: AppColors.success,
                             ),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'تم اختيار الوجهة: ${_destinationController.text}',
+                                style: const TextStyle(fontFamily: 'Cairo'),
+                              ),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(

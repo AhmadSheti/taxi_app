@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../constants.dart';
+import '../controller/pickup_confirmation_controller.dart';
 // استيراد شاشة اختيار السيارة للخطوة القادمة
 // import 'car_selection_screen.dart';
 
@@ -18,9 +20,19 @@ class PickupConfirmationScreen extends StatefulWidget {
 }
 
 class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
-  // موقع وهمي للانطلاق كما هو محدد في نبرة صوت الدليل
-  final String _pickupAddress =
-      'شارع المزة، أمام الهيئة العامة لمستشفى المواساة';
+  late final PickupConfirmationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.put(
+      PickupConfirmationController(
+        initialAddress: 'شارع المزة، أمام الهيئة العامة لمستشفى المواساة',
+        initialLatitude: 33.5138,
+        initialLongitude: 36.2765,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +45,9 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
             Container(
               width: double.infinity,
               height: double.infinity,
-              color: const Color(0xFFE4EEF1), // لون الخلفية الهادئة المائل للزرقة
+              color: const Color(
+                0xFFE4EEF1,
+              ), // لون الخلفية الهادئة المائل للزرقة
               child: Center(
                 child: Opacity(
                   opacity: 0.3,
@@ -162,13 +176,15 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            _pickupAddress,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 14,
-                              color: AppColors.textMain,
-                              fontWeight: FontWeight.w600,
+                          child: GetBuilder<PickupConfirmationController>(
+                            builder: (controller) => Text(
+                              controller.pickupAddress,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 14,
+                                color: AppColors.textMain,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -206,11 +222,10 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                       height: 54,
                       child: ElevatedButton(
                         onPressed: () {
-                          // هنا سنربط الانتقال إلى الشاشة (C) اختيار نوع السيارة لاحقاً
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'تم تأكيد الموقع بنجاح، جاري جلب سيارات مشوار المتاحة...',
+                                'تم تأكيد الموقع: ${_controller.pickupAddress}\nالإحداثيات: ${_controller.pickupLatitude}, ${_controller.pickupLongitude}',
                                 style: const TextStyle(fontFamily: 'Cairo'),
                               ),
                               backgroundColor: AppColors.success,

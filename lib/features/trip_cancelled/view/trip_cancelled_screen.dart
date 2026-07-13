@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../constants.dart';
+import '../controller/trip_cancelled_controller.dart';
 
 class TripCancelledScreen extends StatefulWidget {
-  const TripCancelledScreen({Key? key}) : super(key: key);
+  final int rideId;
+
+  const TripCancelledScreen({Key? key, required this.rideId}) : super(key: key);
 
   @override
   State<TripCancelledScreen> createState() => _TripCancelledScreenState();
 }
 
 class _TripCancelledScreenState extends State<TripCancelledScreen> {
-  String? _selectedReason;
+  late final TripCancelledController controller;
 
   final List<String> _cancelReasons = [
     'السائق متأخر عن الوقت المحدد',
@@ -18,6 +22,12 @@ class _TripCancelledScreenState extends State<TripCancelledScreen> {
     'لقد استقليت سيارة أخرى بالفعل',
     'سبب آخر إضافي'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(TripCancelledController(rideId: widget.rideId));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,49 +74,68 @@ class _TripCancelledScreenState extends State<TripCancelledScreen> {
                 const SizedBox(height: 32),
 
                 // قائمة أسباب إلغاء الرحلة المخصصة
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade100),
-                  ),
-                  child: Column(
-                    children: _cancelReasons.map((reason) {
-                      return RadioListTile<String>(
-                        title: Text(
-                          reason,
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Color(0xFF1A1A2E)),
-                        ),
-                        value: reason,
-                        groupValue: _selectedReason,
-                        activeColor: const Color(0xFF0F4C5C),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedReason = value;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ),
+              GetBuilder<TripCancelledController>(
+                builder: (controller) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: Column(
+                      children: _cancelReasons.map((reason) {
+                        return RadioListTile<String>(
+                          title: Text(
+                            reason,
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Color(0xFF1A1A2E)),
+                          ),
+                          value: reason,
+                          groupValue: controller.selectedReason,
+                          activeColor: const Color(0xFF0F4C5C),
+                          onChanged: (value) {
+                            controller.selectReason(value);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  );
+                },
                 
                 const Spacer(flex: 2),
 
                 // أزرار اتخاذ الإجراءات والتحكم
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                GetBuilder<TripCancelledController>(
+                  builder: (controller) {
+                    return ElevatedButton(
+                      onPressed: controller.isSubmitting
+                          ? null
+                          : () async {
+                              await controller.cancelRide();
+                              if (!controller.hasError) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(controller.successMessage.isNotEmpty ? controller.successMessage : 'تم إلغاء الرحلة')),
+                                );
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F4C5C),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: controller.isSubmitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text(
+                              'إلغاء الرحلة',
+                              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                            ),
+                    );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F4C5C),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'اطلب مشوار جديد',
-                    style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                  ),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
