@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../constants.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../controller/login_controller.dart';
+import '../../register/view/register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -26,20 +28,7 @@ class LoginScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text('م',
-                          style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.accent)),
-                    ),
-                  ),
+                  const Center(child: AppLogo(size: 100)),
                   const SizedBox(height: 30),
                   const Text('تسجيل دخول السائق',
                       style: TextStyle(
@@ -119,6 +108,22 @@ class LoginScreen extends StatelessWidget {
                                     fontWeight: FontWeight.bold)),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  // رابط الانتقال لإنشاء حساب جديد
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('ليس لديك حساب؟ ',
+                          style: TextStyle(color: AppColors.textGrey)),
+                      GestureDetector(
+                        onTap: () => Get.to(() => const RegisterScreen()),
+                        child: const Text('أنشئ حساباً الآن',
+                            style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
                 ],
               ),

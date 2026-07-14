@@ -8,7 +8,6 @@ import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/storage/app_storage.dart';
-import '../../notifications/view/notifications_screen.dart';
 
 /// كنترولر تسجيل الدخول (بأسلوب GetBuilder).
 /// المتغيّرات عادية بدون .obs، ونستدعي update() عند تغيّرها.
@@ -88,7 +87,11 @@ class RegisterController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
       ),
       (data) async {
-        final token = data['token'] ?? data['access_token'];
+        // التوكن داخل data['data'] (شكل الرد الموحّد).
+        final payload = (data is Map && data['data'] is Map)
+            ? Map<String, dynamic>.from(data['data'])
+            : Map<String, dynamic>.from(data);
+        final token = payload['token'] ?? payload['access_token'];
         if (token != null) {
           await AppStorage.saveToken(token.toString());
         }

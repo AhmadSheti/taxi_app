@@ -40,17 +40,17 @@ class NotificationsController extends GetxController {
     );
   }
 
-  Future<void> markAllAsRead() async {
-    final result = await ApiService.instance.makeRequest(
+  /// تُستدعى عند فتح الشاشة: نجلب الإشعارات للعرض، ثم نُعلّمها كلها
+  /// كمقروءة على السيرفر تلقائياً (بلا زر، وبصمت دون إعادة جلب).
+  Future<void> openNotifications() async {
+    await fetchNotifications();
+    await _markAllAsReadSilently();
+  }
+
+  Future<void> _markAllAsReadSilently() async {
+    await ApiService.instance.makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.notificationsReadAll,
-    );
-
-    result.fold(
-      (error) => Get.snackbar('خطأ', error,
-          backgroundColor: Colors.red.shade100,
-          snackPosition: SnackPosition.BOTTOM),
-      (_) => fetchNotifications(), // نعيد الجلب لتحديث الحالة
     );
   }
 }

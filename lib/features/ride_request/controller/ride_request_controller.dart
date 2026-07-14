@@ -4,11 +4,47 @@ import 'package:get/get.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
+import '../../dashboard/controller/pending_rides_controller.dart';
 import '../model/ride_details_model.dart';
 
 class RideRequestController extends GetxController {
   bool isLoading = false;
   RideDetailsModel? currentRide;
+
+  // معرّف الرحلة الحالية — يُضبط عند قبول الطلب ويبقى ثابتاً طوال الرحلة،
+  // حتى لو لم تُحمّل تفاصيل الرحلة بعد.
+  int _currentRideId = 0;
+  int get currentRideId => currentRide?.id ?? _currentRideId;
+
+  /// إنهاء الرحلة: نمسح الحالة ونستأنف استطلاع الطلبات المتاحة.
+  void finishTrip() {
+    currentRide = null;
+    _currentRideId = 0;
+    if (Get.isRegistered<PendingRidesController>()) {
+      Get.find<PendingRidesController>().resumeAfterTrip();
+    }
+    update();
+  }
+
+  /// استئناف الرحلة النشطة عند فتح/إعادة تشغيل التطبيق.
+  /// يرجع الرحلة النشطة إن وُجدت (accepted / driver_arrived / in_progress) وإلا null.
+  Future<RideDetailsModel?> fetchActiveRide() async {
+    final result = await ApiService.instance.makeRequest(
+      method: ApiMethod.get,
+      endPoint: EndPoints.activeRide,
+    );
+
+    RideDetailsModel? ride;
+    result.fold((_) {}, (data) {
+      final d = (data is Map) ? data['data'] : null;
+      if (d is Map) {
+        ride = RideDetailsModel.fromJson(Map<String, dynamic>.from(d));
+        currentRide = ride;
+      }
+    });
+    update();
+    return ride;
+  }
 
   Future<void> acceptRide(int rideId) async {
     isLoading = true;
@@ -16,7 +52,7 @@ class RideRequestController extends GetxController {
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.put,
-      endPoint: '$EndPoints.acceptRide/$rideId/accept',
+      endPoint: EndPoints.acceptRide(rideId),
     );
 
     isLoading = false;
@@ -31,7 +67,16 @@ class RideRequestController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
         );
       },
-      (_) {
+      (data) {
+        // نثبّت معرّف الرحلة المقبولة، ونحمّل تفاصيلها للعرض إن توفّرت.
+        _currentRideId = rideId;
+        final d = (data is Map) ? data['data'] : null;
+        if (d is Map) {
+          currentRide = RideDetailsModel.fromJson(Map<String, dynamic>.from(d));
+        }
+        // بدأت رحلة → أوقف استطلاع الطلبات المتاحة.
+        Get.find<PendingRidesController>().pauseForTrip();
+        update();
         Get.snackbar(
           'نجاح',
           'تم قبول الرحلة',
@@ -48,7 +93,7 @@ class RideRequestController extends GetxController {
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.put,
-      endPoint: '$EndPoints.rejectRide/$rideId/reject',
+      endPoint: EndPoints.rejectRide(rideId),
       body: {
         'reason': reason,
       },
@@ -83,7 +128,7 @@ class RideRequestController extends GetxController {
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.put,
-      endPoint: '$EndPoints.arrivedRide/$rideId/arrived',
+      endPoint: EndPoints.arrivedRide(rideId),
     );
 
     isLoading = false;
@@ -115,7 +160,7 @@ class RideRequestController extends GetxController {
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.put,
-      endPoint: '$EndPoints.startRide/$rideId/start',
+      endPoint: EndPoints.startRide(rideId),
     );
 
     isLoading = false;
@@ -144,7 +189,7 @@ class RideRequestController extends GetxController {
   Future<void> sendTracking(int rideId, {required double latitude, required double longitude}) async {
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.post,
-      endPoint: '$EndPoints.trackingRide/$rideId/tracking',
+      endPoint: EndPoints.trackingRide(rideId),
       body: {
         'latitude': latitude,
         'longitude': longitude,
@@ -165,7 +210,7 @@ class RideRequestController extends GetxController {
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.put,
-      endPoint: '$EndPoints.completeRide/$rideId/complete',
+      endPoint: EndPoints.completeRide(rideId),
       body: {
         'distance_km': distanceKm,
         'duration_minutes': durationMinutes,
@@ -185,6 +230,8 @@ class RideRequestController extends GetxController {
         );
       },
       (_) {
+        // انتهت الرحلة → استأنف استطلاع الطلبات إن كان السائق نشطاً.
+        Get.find<PendingRidesController>().resumeAfterTrip();
         Get.snackbar(
           'نجاح',
           'تم إنهاء الرحلة',
@@ -195,13 +242,44 @@ class RideRequestController extends GetxController {
     );
   }
 
+  /// إلغاء الرحلة من طرف السائق (مثلاً: العميل لم يحضر).
+  Future<bool> cancelRide(int rideId, {String reason = 'العميل لم يحضر'}) async {
+    isLoading = true;
+    update();
+
+    final result = await ApiService.instance.makeRequest(
+      method: ApiMethod.put,
+      endPoint: EndPoints.cancelRide(rideId),
+      body: {'reason': reason},
+    );
+
+    isLoading = false;
+    update();
+
+    bool ok = false;
+    result.fold(
+      (error) {
+        Get.snackbar('خطأ', error,
+            backgroundColor: Colors.red.shade100, snackPosition: SnackPosition.BOTTOM);
+      },
+      (_) {
+        ok = true;
+        // انتهت الرحلة → استأنف استطلاع الطلبات إن كان السائق نشطاً.
+        Get.find<PendingRidesController>().resumeAfterTrip();
+        Get.snackbar('تم', 'تم إلغاء الرحلة',
+            backgroundColor: Colors.orange.shade100, snackPosition: SnackPosition.BOTTOM);
+      },
+    );
+    return ok;
+  }
+
   Future<void> confirmPayment(int rideId) async {
     isLoading = true;
     update();
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.put,
-      endPoint: '$EndPoints.paymentConfirm/$rideId/payment/confirm',
+      endPoint: EndPoints.paymentConfirm(rideId),
     );
 
     isLoading = false;
@@ -233,7 +311,7 @@ class RideRequestController extends GetxController {
 
     final result = await ApiService.instance.makeRequest(
       method: ApiMethod.get,
-      endPoint: '$EndPoints.rideDetails/$rideId',
+      endPoint: EndPoints.rideById(rideId),
     );
 
     isLoading = false;
@@ -248,11 +326,11 @@ class RideRequestController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
         );
       },
-      (data) {
-        if (data is Map<String, dynamic>) {
-          currentRide = RideDetailsModel.fromJson(data);
-        } else if (data is Map) {
-          currentRide = RideDetailsModel.fromJson(Map<String, dynamic>.from(data));
+      (response) {
+        // شكل الرد: { success, data: { ...الرحلة... } } — نأخذ المستوى الداخلي.
+        final map = (response is Map) ? response['data'] : null;
+        if (map is Map) {
+          currentRide = RideDetailsModel.fromJson(Map<String, dynamic>.from(map));
         } else {
           currentRide = null;
         }

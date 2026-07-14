@@ -15,30 +15,18 @@ class NotificationsScreen extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: GetBuilder<NotificationsController>(
-        initState: (_) => Get.find<NotificationsController>().fetchNotifications(),
+        // عند فتح الشاشة: نجلب الإشعارات ونُعلّمها كمقروءة تلقائياً على السيرفر.
+        initState: (_) => Get.find<NotificationsController>().openNotifications(),
         builder: (controller) => Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
             backgroundColor: AppColors.background,
             elevation: 0,
+            centerTitle: true,
             automaticallyImplyLeading: false,
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: controller.markAllAsRead,
-                  child: const Text('تحديد الكل كمقروء',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold)),
-                ),
-                const Text('الإشعارات',
-                    style: TextStyle(
-                        color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 40),
-              ],
-            ),
+            title: const Text('الإشعارات',
+                style: TextStyle(
+                    color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           body: _buildBody(controller),
         ),

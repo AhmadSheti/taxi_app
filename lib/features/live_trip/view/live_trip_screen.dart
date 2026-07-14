@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/widgets/app_map.dart';
 import '../../ride_request/controller/ride_request_controller.dart';
 import '../../trip_receipt/view/trip_receipt_screen.dart';
 
@@ -18,7 +20,9 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
   int _elapsedSeconds = 872; // بادئين من 14 دقيقة و32 ثانية متل الصورة
   double _distance = 8.2; // المسافة الحالية كم
   int _fare = 7420; // الأجرة الحالية بالليرة السورية
-  final int _rideId = 501;
+  bool _completing = false;
+  // معرّف الرحلة الحقيقي (من الكنترولر) بدل رقم ثابت.
+  int get _rideId => Get.find<RideRequestController>().currentRideId;
 
   @override
   void initState() {
@@ -55,6 +59,25 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
     super.dispose();
   }
 
+  Future<void> _onCompleteTrip() async {
+    setState(() => _completing = true);
+    _tripTimer?.cancel();
+    _trackingTimer?.cancel();
+
+    final controller = Get.find<RideRequestController>();
+    await controller.completeRide(
+      _rideId,
+      distanceKm: _distance,
+      durationMinutes: _elapsedSeconds ~/ 60,
+    );
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const TripReceiptScreen()),
+    );
+  }
+
   // دالة لتنسيق الوقت لشكل (دقائق:ثواني)
   String _formatDuration(int totalSeconds) {
     int minutes = totalSeconds ~/ 60;
@@ -73,11 +96,23 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. خلفية الخريطة
-          Container(
-            color: Colors.grey.shade200,
-            child: const Center(
-              child: Icon(Icons.map, size: 100, color: Colors.grey),
+          // 1. خلفية الخريطة الحقيقية (OpenStreetMap)
+          Positioned.fill(
+            child: GetBuilder<RideRequestController>(
+              builder: (c) {
+                final ride = c.currentRide;
+                if (ride == null || ride.pickupLat == 0) {
+                  return Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return AppMap(
+                  height: null,
+                  pickup: LatLng(ride.pickupLat, ride.pickupLng),
+                  destination: LatLng(ride.destinationLat, ride.destinationLng),
+                );
+              },
             ),
           ),
 
@@ -302,27 +337,7 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        _tripTimer?.cancel();
-                        _trackingTimer?.cancel();
-
-                        final controller = Get.find<RideRequestController>();
-                        await controller.completeRide(
-                          _rideId,
-                          distanceKm: _distance,
-                          durationMinutes: _elapsedSeconds ~/ 60,
-                        );
-
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TripReceiptScreen(),
-                            ),
-                          );
-                        }
-                      },
-
+                      onPressed: _completing ? null : _onCompleteTrip,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: orangeColor,
                         shape: RoundedRectangleBorder(
@@ -330,14 +345,23 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'إنهاء الرحلة',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _completing
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black,
+                              ),
+                            )
+                          : const Text(
+                              'إنهاء الرحلة',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],

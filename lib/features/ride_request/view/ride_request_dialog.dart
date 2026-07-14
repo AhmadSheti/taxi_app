@@ -1,16 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
+import '../../../core/widgets/app_map.dart';
 import '../../active_trip/view/active_trip_screen.dart';
 import '../../dashboard/model/pending_ride_model.dart';
 import '../controller/ride_request_controller.dart';
 
 void showRideRequest(BuildContext context, PendingRideModel ride) {
-  final controller = Get.find<RideRequestController>();
-
   showDialog(
     context: context,
     barrierDismissible: false, // لا يُغلق إلا بالضغط على قبول أو رفض
-    builder: (context) => Dialog(
+    builder: (context) => _RideRequestDialog(ride: ride),
+  );
+}
+
+class _RideRequestDialog extends StatefulWidget {
+  final PendingRideModel ride;
+  const _RideRequestDialog({required this.ride});
+
+  @override
+  State<_RideRequestDialog> createState() => _RideRequestDialogState();
+}
+
+class _RideRequestDialogState extends State<_RideRequestDialog> {
+  final controller = Get.find<RideRequestController>();
+  bool _accepting = false;
+  bool _rejecting = false;
+
+  // يُعطّل كلا الزرين ما دامت أي عملية جارية.
+  bool get _busy => _accepting || _rejecting;
+
+  Future<void> _onReject() async {
+    setState(() => _rejecting = true);
+    await controller.rejectRide(widget.ride.id);
+    if (!mounted) return;
+    Navigator.pop(context);
+  }
+
+  Future<void> _onAccept() async {
+    setState(() => _accepting = true);
+    await controller.acceptRide(widget.ride.id);
+    await controller.getRideDetails(widget.ride.id);
+    if (!mounted) return;
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ActiveTripScreen()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ride = widget.ride;
+    return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -43,9 +85,11 @@ void showRideRequest(BuildContext context, PendingRideModel ride) {
                           fontSize: 16,
                         ),
                       ),
-                      Text(
-                        'التقييم: ${ride.ratingAverage.toStringAsFixed(1)} ★',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      // ملاحظة: لا يوجد نظام تقييم للزبائن في الـ backend
+                      // (التقييم باتجاه واحد: العميل يقيّم السائق فقط).
+                      const Text(
+                        'طلب رحلة جديد',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   ),
@@ -54,14 +98,12 @@ void showRideRequest(BuildContext context, PendingRideModel ride) {
             ),
             const SizedBox(height: 15),
 
-            // 2. الخريطة المصغرة
-            Container(
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Center(child: Icon(Icons.map, color: Colors.grey)),
+            // 2. الخريطة المصغرة — خريطة حقيقية + خط بين الانطلاق والوصول
+            AppMap(
+              pickup: LatLng(ride.pickupLat, ride.pickupLng),
+              destination: LatLng(ride.destinationLat, ride.destinationLng),
+              height: 130,
+              borderRadius: 15,
             ),
             const SizedBox(height: 15),
 
@@ -101,37 +143,39 @@ void showRideRequest(BuildContext context, PendingRideModel ride) {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () async {
-                      await controller.rejectRide(ride.id);
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text(
-                      'رفض',
-                      style: TextStyle(color: Colors.black),
-                    ),
+                    onPressed: _busy ? null : _onReject,
+                    child: _rejecting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black,
+                            ),
+                          )
+                        : const Text(
+                            'رفض',
+                            style: TextStyle(color: Colors.black),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () async {
-                      await controller.acceptRide(ride.id);
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ActiveTripScreen(),
-                          ),
-                        );
-                      }
-                    },
+                    onPressed: _busy ? null : _onAccept,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF80CBC4),
                     ),
-                    child: const Text('قبول'),
+                    child: _accepting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('قبول'),
                   ),
                 ),
               ],
@@ -139,8 +183,8 @@ void showRideRequest(BuildContext context, PendingRideModel ride) {
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ويدجت مساعد للمعلومات

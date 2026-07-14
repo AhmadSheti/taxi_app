@@ -4,12 +4,9 @@ import 'package:get_storage/get_storage.dart';
 
 import 'constants.dart';
 import 'core/app_binding.dart';
-import 'core/storage/app_storage.dart';
-import 'features/login/view/login_screen.dart';
-import 'features/notifications/view/notifications_screen.dart';
+import 'features/splash/view/splash_screen.dart';
 
 Future<void> main() async {
-  // نُهيّئ التخزين المحلي قبل تشغيل التطبيق (ضروري لـ get_storage).
   await GetStorage.init();
   runApp(const MishwarDriverApp());
 }
@@ -32,10 +29,8 @@ class MishwarDriverApp extends StatelessWidget {
       ),
       // كل الـ Controllers تُحقن هنا مرة واحدة عند بدء التطبيق.
       initialBinding: AppBinding(),
-      // إذا كان السائق مسجّل دخول نفتح الإشعارات مباشرة، وإلا شاشة الدخول.
-      home: AppStorage.isLoggedIn
-          ? const NotificationsScreen()
-          : const LoginScreen(),
+      // نبدأ دائماً من Splash، وهي تقرّر الوجهة حسب حالة تسجيل الدخول.
+      home: const SplashScreen(),
     );
   }
 }

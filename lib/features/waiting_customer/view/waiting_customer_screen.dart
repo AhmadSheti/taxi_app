@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../active_trip/view/active_trip_screen.dart';
+import 'package:latlong2/latlong.dart';
+import '../../../core/widgets/app_map.dart';
+import '../../dashboard/view/dashbord_screen.dart';
+import '../../live_trip/view/live_trip_screen.dart';
 import '../../ride_request/controller/ride_request_controller.dart';
 
 class WaitingCustomerScreen extends StatefulWidget {
@@ -15,6 +18,20 @@ class _WaitingCustomerScreenState extends State<WaitingCustomerScreen> {
   // عداد تصاعدي لوقت الانتظار (بدءاً من دقيقة و24 ثانية متل الصورة)
   int _totalSeconds = 84;
   Timer? _timer;
+  bool _starting = false;
+
+  Future<void> _onStartRide() async {
+    setState(() => _starting = true);
+    _timer?.cancel();
+    final controller = Get.find<RideRequestController>();
+    await controller.startRide(controller.currentRideId);
+    await controller.getRideDetails(controller.currentRideId);
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LiveTripScreen()),
+    );
+  }
 
   @override
   void initState() {
@@ -47,16 +64,27 @@ class _WaitingCustomerScreenState extends State<WaitingCustomerScreen> {
   Widget build(BuildContext context) {
     const Color tealColor = Color(0xFF00B4A0); // التيركواز الأساسي
     const Color orangeColor = Color(0xFFFFB822); // الأصفر للانتظار
-    const Color lightGrey = Color(0xFFF1F3F6);
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. خلفية الخريطة
-          Container(
-            color: Colors.grey.shade200,
-            child: const Center(
-              child: Icon(Icons.map, size: 100, color: Colors.grey),
+          // 1. خلفية الخريطة الحقيقية (OpenStreetMap)
+          Positioned.fill(
+            child: GetBuilder<RideRequestController>(
+              builder: (c) {
+                final ride = c.currentRide;
+                if (ride == null || ride.pickupLat == 0) {
+                  return Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return AppMap(
+                  height: null,
+                  pickup: LatLng(ride.pickupLat, ride.pickupLng),
+                  destination: LatLng(ride.destinationLat, ride.destinationLng),
+                );
+              },
             ),
           ),
 
@@ -242,22 +270,8 @@ class _WaitingCustomerScreenState extends State<WaitingCustomerScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 54,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        _timer?.cancel();
-                        final controller = Get.find<RideRequestController>();
-                        await controller.startRide(501);
-                        await controller.getRideDetails(501);
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ActiveTripScreen(),
-                            ),
-                          );
-                        }
-                      },
-
+                    child: ElevatedButton(
+                      onPressed: _starting ? null : _onStartRide,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: tealColor,
                         shape: RoundedRectangleBorder(
@@ -265,19 +279,34 @@ class _WaitingCustomerScreenState extends State<WaitingCustomerScreen> {
                         ),
                         elevation: 0,
                       ),
-                      icon: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      label: const Text(
-                        'بدء الرحلة',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _starting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'بدء الرحلة',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                   const SizedBox(height: 15), // خيار إلغاء الرحلة تحت
@@ -286,32 +315,59 @@ class _WaitingCustomerScreenState extends State<WaitingCustomerScreen> {
                       _timer?.cancel();
                       showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('إلغاء الرحلة'),
-                          content: const Text(
-                            'هل أنت متأكد أنك تريد إلغاء الرحلة لعدم حضور العميل؟',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('رجوع'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                        builder: (dialogContext) {
+                          bool cancelling = false;
+                          return StatefulBuilder(
+                            builder: (dialogContext, setDialogState) =>
+                                AlertDialog(
+                              title: const Text('إلغاء الرحلة'),
+                              content: const Text(
+                                'هل أنت متأكد أنك تريد إلغاء الرحلة لعدم حضور العميل؟',
                               ),
-                              onPressed: () {
-                                // 3. هنا سيتم الانتقال للرئيسية بعد الإلغاء
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  '/home',
-                                  (route) => false,
-                                );
-                              },
-                              child: const Text('تأكيد الإلغاء'),
+                              actions: [
+                                TextButton(
+                                  onPressed: cancelling
+                                      ? null
+                                      : () => Navigator.pop(dialogContext),
+                                  child: const Text('رجوع'),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                  ),
+                                  onPressed: cancelling
+                                      ? null
+                                      : () async {
+                                          setDialogState(
+                                              () => cancelling = true);
+                                          final controller =
+                                              Get.find<RideRequestController>();
+                                          final ok = await controller.cancelRide(
+                                              controller.currentRideId);
+                                          // نعود للوحة التحكم (الاستطلاع يعود تلقائياً).
+                                          if (ok) {
+                                            Get.offAll(
+                                                () => const DashboardScreen());
+                                          } else if (dialogContext.mounted) {
+                                            setDialogState(
+                                                () => cancelling = false);
+                                          }
+                                        },
+                                  child: cancelling
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text('تأكيد الإلغاء'),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                     child: const Text(

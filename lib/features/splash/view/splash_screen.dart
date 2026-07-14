@@ -1,24 +1,56 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../login/view/login_screen.dart'; // رح تنقلنا لصفحة الدخول
+import 'package:get/get.dart';
+
+import '../../../constants.dart';
+import '../../../core/storage/app_storage.dart';
+import '../../../core/widgets/app_logo.dart';
+import '../../active_trip/view/active_trip_screen.dart';
+import '../../dashboard/controller/pending_rides_controller.dart';
+import '../../live_trip/view/live_trip_screen.dart';
+import '../../login/view/login_screen.dart';
+import '../../main/view/main_shell.dart';
+import '../../ride_request/controller/ride_request_controller.dart';
+import '../../waiting_customer/view/waiting_customer_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  @override
   void initState() {
     super.initState();
-    // مؤقت زمني ينقلنا بعد 3 ثواني لشاشة تسجيل الدخول
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
-    });
+    // بعد ثانيتين: نحدّد الوجهة حسب حالة السائق.
+    Timer(const Duration(seconds: 2), _decideStart);
+  }
+
+  Future<void> _decideStart() async {
+    if (!AppStorage.isLoggedIn) {
+      Get.offAll(() => const LoginScreen());
+      return;
+    }
+
+    // مسجّل دخول: نتحقق إن كان لديه رحلة نشطة لنستأنفها للشاشة الصحيحة.
+    final ride = await Get.find<RideRequestController>().fetchActiveRide();
+
+    Get.offAll(() => const MainShell());
+
+    if (ride != null) {
+      // نوقف استطلاع الطلبات المتاحة (السائق مشغول برحلة).
+      Get.find<PendingRidesController>().pauseForTrip();
+
+      final Widget? screen = switch (ride.status) {
+        'accepted' => const ActiveTripScreen(),       // في الطريق للزبون → زر "وصلت"
+        'driver_arrived' => const WaitingCustomerScreen(), // وصل → زر "بدء الرحلة"
+        'in_progress' => const LiveTripScreen(),       // الرحلة جارية → زر "إنهاء"
+        _ => null,
+      };
+      if (screen != null) Get.to(() => screen);
+    }
   }
 
   @override
@@ -29,34 +61,22 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // تصميم اللوجو المؤقت لحين رفع الصورة الحقيقية
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: const Color(0xff0d3e46), // اللون الزيتي
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: const Center(
-                child: Text(
-                  'م',
-                  style: TextStyle(fontSize: 60, color: Color(0xfffbc02d), fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
+            const AppLogo(size: 130),
             const SizedBox(height: 20),
             const Text(
               'مشوار',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xff0d3e46)),
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary),
             ),
             const Text(
               'DRIVER • السائقين',
-              style: TextStyle(fontSize: 14, color: Colors.grey, letterSpacing: 2),
+              style: TextStyle(
+                  fontSize: 14, color: Colors.grey, letterSpacing: 2),
             ),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(
-              color: Color(0xff0d3e46),
-            ),
+            const CircularProgressIndicator(color: AppColors.primary),
           ],
         ),
       ),

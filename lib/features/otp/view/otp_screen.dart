@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:new_app/features/register/controller/register_controller.dart';
 import 'dart:async';
-import '../../dashboard/view/dashbord_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/widgets/app_map.dart';
 import '../controller/availability_controller.dart';
 import '../controller/pending_rides_controller.dart';
-import '../model/pending_ride_model.dart';
 import '../../ride_request/view/ride_request_dialog.dart';
 
 // الموديل (الوعاء اللي بيشيل البيانات)
@@ -44,7 +44,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _pendingRidesController.fetchPendingRides();
+    // عند وصول طلب جديد أثناء الاستطلاع → نعرض حوار القبول تلقائياً.
+    _pendingRidesController.onNewRequest = (ride) {
+      if (mounted) showRideRequest(context, ride);
+    };
+    // نزامن الحالة الحقيقية من السيرفر، ثم نبدأ الاستطلاع فقط إن كان السائق نشطاً.
+    _availabilityController.syncStatus().then((_) {
+      if (_availabilityController.isOnline) {
+        _pendingRidesController.startPolling();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // نوقف الاستطلاع ونلغي الـ callback عند مغادرة لوحة التحكم.
+    _pendingRidesController.onNewRequest = null;
+    _pendingRidesController.stopPolling();
+    super.dispose();
   }
 
   @override
@@ -52,12 +69,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // الخلفية (الخريطة)
-          Container(
-            color: Colors.grey.shade200,
-            child: const Center(
-              child: Icon(Icons.map, size: 100, color: Colors.grey),
-            ),
+          // الخلفية: خريطة حقيقية (OpenStreetMap) بملء الشاشة
+          const Positioned.fill(
+            child: AppMap(height: null, initialZoom: 12),
           ),
 
           // العلوية
@@ -76,6 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   GestureDetector(
                     onTap: () async {
+                      if (_availabilityController.isLoading) return;
                       await _availabilityController.toggleAvailability();
 
                       if (_availabilityController.isOnline) {
@@ -94,8 +109,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: GetBuilder<AvailabilityController>(
                       builder: (controller) => _buildTopCard(
                         Icons.circle,
-                        controller.isOnline ? 'مُتصل' : 'غير متصل',
+                        controller.isLoading
+                            ? 'جارٍ التحديث...'
+                            : (controller.isOnline ? 'مُتصل' : 'غير متصل'),
                         color: controller.isOnline ? const Color(0xFF00B4A0) : Colors.grey,
+                        loading: controller.isLoading,
                       ),
                     ),
                   ),
@@ -176,11 +194,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 20),
                   GetBuilder<PendingRidesController>(
-                    builder: (controller) => _buildLastTripCard(
-                      controller.pendingRides.isNotEmpty
-                          ? controller.pendingRides.first
-                          : null,
-                    ),
+                    builder: (controller) => _buildIncomingRequestCard(controller),
                   ),
                 ],
               ),
@@ -221,6 +235,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     IconData icon,
     String text, {
     Color color = const Color(0xFF00B4A0),
+    bool loading = false,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -231,7 +246,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: color),
+          loading
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: color),
+                )
+              : Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
@@ -239,29 +260,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLastTripCard(PendingRideModel? ride) {
-    final title = ride == null
-        ? 'لا توجد طلبات واردة حالياً'
-        : 'طلب وارد #${ride.id} • ${ride.estimatedFare.toStringAsFixed(0)} ل.س';
+  // بطاقة "طلب وارد" واضحة — تظهر عند وجود طلبات، وبالضغط عليها يُفتح حوار القبول.
+  Widget _buildIncomingRequestCard(PendingRidesController controller) {
+    if (controller.isLoading && controller.pendingRides.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F6),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Icon(Icons.arrow_back_ios, size: 14, color: Colors.grey),
-          Flexible(
-            child: Text(
-              title,
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+    if (controller.pendingRides.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F3F6),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.search, color: Colors.grey, size: 28),
+            SizedBox(height: 8),
+            Text('جاري البحث عن طلبات...',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    }
+
+    final ride = controller.pendingRides.first;
+    final extra = controller.pendingRides.length - 1;
+
+    return GestureDetector(
+      onTap: () => showRideRequest(context, ride),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE0F7F4),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF00B4A0), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Color(0xFF00B4A0),
+                  child: Icon(Icons.notifications_active, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('طلب رحلة وارد',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${ride.customerName} • ${ride.distanceKm.toStringAsFixed(1)} كم',
+                        style: const TextStyle(color: Colors.black54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Text('${ride.estimatedFare.toStringAsFixed(0)} ل.س',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF00B4A0))),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () => showRideRequest(context, ride),
+                icon: const Icon(Icons.visibility, size: 18),
+                label: Text(extra > 0 ? 'عرض الطلب (و $extra آخر)' : 'عرض الطلب وقبوله'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00B4A0),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

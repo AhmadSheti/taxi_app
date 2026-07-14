@@ -1,8 +1,10 @@
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
+import 'package:get/get.dart' hide Response;
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../storage/app_storage.dart';
+import '../../features/login/view/login_screen.dart';
 import 'api_constants.dart';
 import 'api_method.dart';
 
@@ -77,6 +79,10 @@ class ApiService {
       if (statusCode >= 200 && statusCode < 300) {
         return Right(response.data);
       }
+      // مصادقة فاشلة (توكن منتهٍ / غير صالح / خاطئ الدور) → خروج تلقائي
+      if (statusCode == 401 || statusCode == 403) {
+        await _handleAuthError();
+      }
       // خطأ: نحاول قراءة رسالة الخطأ من السيرفر
       return Left(_extractMessage(response.data, statusCode));
     } on DioException catch (e) {
@@ -87,6 +93,20 @@ class ApiService {
     } catch (e) {
       return Left(e.toString());
     }
+  }
+
+  // حارس يمنع تكرار التوجيه عند وصول عدة ردود 401/403 معاً.
+  static bool _handlingAuth = false;
+
+  /// عند فشل المصادقة: نمسح التوكن ونعيد المستخدم لشاشة الدخول مرة واحدة.
+  Future<void> _handleAuthError() async {
+    if (_handlingAuth || AppStorage.token == null) return;
+    _handlingAuth = true;
+    await AppStorage.clear();
+    Get.offAll(() => const LoginScreen());
+    Get.snackbar('انتهت الجلسة', 'يرجى تسجيل الدخول من جديد',
+        snackPosition: SnackPosition.BOTTOM);
+    _handlingAuth = false;
   }
 
   // يستخرج رسالة الخطأ من رد السيرفر، أو رسالة افتراضية حسب الكود.

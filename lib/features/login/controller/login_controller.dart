@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:new_app/features/dashboard/view/dashbord_screen.dart';
+import 'package:new_app/features/main/view/main_shell.dart';
 
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/storage/app_storage.dart';
-import '../../notifications/view/notifications_screen.dart';
 import '../model/user_model.dart';
 
 /// كنترولر تسجيل الدخول (بأسلوب GetBuilder).
@@ -45,16 +44,27 @@ class LoginController extends GetxController {
           backgroundColor: Colors.red.shade100,
           snackPosition: SnackPosition.BOTTOM),
       (data) async {
-        // شكل الرد المتوقع: { "token": "...", "user": { ... } }
-        final token = data['token'] ?? data['access_token'];
+        // شكل الرد: { "success": true, "data": { "token": "...", "user": {...} } }
+        // إذن التوكن داخل data['data'] وليس في المستوى الأعلى.
+        final payload = (data is Map && data['data'] is Map)
+            ? Map<String, dynamic>.from(data['data'])
+            : Map<String, dynamic>.from(data);
+
+        final token = payload['token'] ?? payload['access_token'];
+        if (token == null) {
+          Get.snackbar('خطأ', 'لم يصل التوكن من السيرفر',
+              backgroundColor: Colors.red.shade100,
+              snackPosition: SnackPosition.BOTTOM);
+          return;
+        }
         await AppStorage.saveToken(token.toString());
 
-        if (data['user'] != null) {
-          user = UserModel.fromJson(data['user']);
+        if (payload['user'] != null) {
+          user = UserModel.fromJson(Map<String, dynamic>.from(payload['user']));
         }
 
-        // ننتقل لشاشة الإشعارات (نستبدل الشاشة الحالية).
-        Get.offAll(() => DashboardScreen());
+        // ننتقل للهيكل الرئيسي (شريط التنقّل السفلي).
+        Get.offAll(() => const MainShell());
       },
     );
   }

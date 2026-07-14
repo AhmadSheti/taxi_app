@@ -32,7 +32,6 @@ dependencies:
     sdk: flutter
 
   http: ^1.6.0
-  google_maps_flutter: ^2.5.0
   geolocator: ^10.1.0
   image_picker: ^1.0.7
   provider: ^6.1.1
@@ -47,6 +46,10 @@ dependencies:
   dartz: ^0.10.1            # يوفّر Either (Left = خطأ / Right = نجاح)
   get_storage: ^2.1.1       # تخزين محلي بسيط (نحفظ فيه التوكن)
   pretty_dio_logger: ^1.4.0 # طباعة تفاصيل كل طلب في الـ console (للتصحيح)
+
+  # ─── الخريطة (مجانية عبر OpenStreetMap — بدون مفتاح ولا فوترة) ───
+  flutter_map: ^8.1.1       # عرض الخريطة + رسم الخط (Polyline) والعلامات محلياً
+  latlong2: ^0.9.1          # نوع LatLng (إحداثيات)
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +72,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/logo.jpeg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

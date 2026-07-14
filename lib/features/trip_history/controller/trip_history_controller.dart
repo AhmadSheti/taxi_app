@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
+import '../../blocked_users/controller/blocked_users_controller.dart';
 import '../model/trip_history_model.dart';
 
 class TripHistoryController extends GetxController {
@@ -12,6 +13,12 @@ class TripHistoryController extends GetxController {
   int currentPage = 1;
   int lastPage = 1;
   int total = 0;
+
+  /// معرّف الزبون الجاري حظره حالياً (لعرض مؤشّر التحميل على الزر).
+  int? blockingCustomerId;
+
+  /// معرّفات الزبائن الذين حُظِروا لتوّهم من هذه الشاشة (لتحديث حالة الزر).
+  final Set<int> blockedCustomerIds = {};
 
   Future<void> fetchTripHistory({
     String status = 'all',
@@ -75,5 +82,39 @@ class TripHistoryController extends GetxController {
         update();
       },
     );
+  }
+
+  /// حظر زبون: يمنع وصول طلبات هذا الزبون إلى السائق مستقبلاً.
+  Future<void> blockCustomer(int customerId, {String? reason}) async {
+    if (blockingCustomerId != null) return;
+    blockingCustomerId = customerId;
+    update();
+
+    final result = await ApiService.instance.makeRequest(
+      method: ApiMethod.post,
+      endPoint: EndPoints.blocks,
+      body: {
+        'customer_id': customerId,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+
+    blockingCustomerId = null;
+    result.fold(
+      (error) => Get.snackbar('خطأ', error,
+          backgroundColor: Colors.red.shade100,
+          snackPosition: SnackPosition.BOTTOM),
+      (_) {
+        blockedCustomerIds.add(customerId);
+        Get.snackbar('تم', 'تم حظر الزبون ولن تصلك طلباته مجدداً',
+            backgroundColor: Colors.green.shade100,
+            snackPosition: SnackPosition.BOTTOM);
+        // مزامنة قائمة المحظورين إن كانت شاشتها مفتوحة.
+        if (Get.isRegistered<BlockedUsersController>()) {
+          Get.find<BlockedUsersController>().load();
+        }
+      },
+    );
+    update();
   }
 }

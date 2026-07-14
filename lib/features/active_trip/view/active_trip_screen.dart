@@ -1,10 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
+import '../../../core/widgets/app_map.dart';
 import '../../ride_request/controller/ride_request_controller.dart';
 import '../../waiting_customer/view/waiting_customer_screen.dart';
 
-class ActiveTripScreen extends StatelessWidget {
+class ActiveTripScreen extends StatefulWidget {
   const ActiveTripScreen({super.key});
+
+  @override
+  State<ActiveTripScreen> createState() => _ActiveTripScreenState();
+}
+
+class _ActiveTripScreenState extends State<ActiveTripScreen> {
+  bool _arriving = false;
+
+  Future<void> _onArrived() async {
+    setState(() => _arriving = true);
+    final controller = Get.find<RideRequestController>();
+    await controller.markArrived(controller.currentRideId);
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const WaitingCustomerScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,11 +37,23 @@ class ActiveTripScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. خلفية الخريطة (شكل مؤقت للخريطة بالخلفية)
-          Container(
-            color: Colors.grey.shade200,
-            child: const Center(
-              child: Icon(Icons.map, size: 100, color: Colors.grey),
+          // 1. خلفية الخريطة الحقيقية (OpenStreetMap) بين نقطة الالتقاط والوجهة
+          Positioned.fill(
+            child: GetBuilder<RideRequestController>(
+              builder: (c) {
+                final ride = c.currentRide;
+                if (ride == null || ride.pickupLat == 0) {
+                  return Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return AppMap(
+                  height: null,
+                  pickup: LatLng(ride.pickupLat, ride.pickupLng),
+                  destination: LatLng(ride.destinationLat, ride.destinationLng),
+                );
+              },
             ),
           ),
 
@@ -305,18 +337,7 @@ class ActiveTripScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final controller = Get.find<RideRequestController>();
-                        await controller.markArrived(501);
-                        if (context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const WaitingCustomerScreen(),
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: _arriving ? null : _onArrived,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: orangeColor,
                         shape: RoundedRectangleBorder(
@@ -324,14 +345,23 @@ class ActiveTripScreen extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'وصلت إلى موقع العميل . ٥٠ م',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _arriving
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black,
+                              ),
+                            )
+                          : const Text(
+                              'وصلت إلى موقع العميل . ٥٠ م',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],

@@ -1,9 +1,12 @@
 import 'package:get/get.dart';
 
-import '../features/company_commission/controller/company_commission_controller.dart';
+import '../features/blocked_users/controller/blocked_users_controller.dart';
+import '../features/car_details/controller/car_details_controller.dart';
 import '../features/dashboard/controller/availability_controller.dart';
 import '../features/dashboard/controller/pending_rides_controller.dart';
 import '../features/driver_earning/controller/driver_earnings_controller.dart';
+import '../features/driver_profile/controller/driver_profile_controller.dart';
+import '../features/driver_ratings/controller/driver_ratings_controller.dart';
 import '../features/login/controller/login_controller.dart';
 import '../features/notifications/controller/notifications_controller.dart';
 import '../features/register/controller/register_controller.dart';
@@ -21,9 +24,12 @@ class AppBinding extends Bindings {
     Get.put(RegisterController());
     Get.put(PendingRidesController());
     Get.put(DriverEarningsController());
-    Get.put(CompanyCommissionController());
     Get.put(AvailabilityController());
     Get.put(RideRequestController());
     Get.put(TripHistoryController());
+    Get.put(DriverProfileController());
+    Get.put(CarDetailsController());
+    Get.put(DriverRatingsController());
+    Get.put(BlockedUsersController());
   }
 }

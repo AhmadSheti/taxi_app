@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../company_commission/view/company_commission_screen.dart';
 import '../controller/driver_earnings_controller.dart';
 class DriverEarningsScreen extends StatefulWidget {
   const DriverEarningsScreen({super.key});
@@ -16,7 +15,9 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // نؤجّل التحميل لِما بعد الإطار حتى لا نستدعي update() أثناء البناء
+    // (الكنترولر مشترك وله GetBuilder حيّ في تبويب الأرباح).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
   }
 
   Future<void> _loadData() async {
@@ -35,7 +36,6 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: const Icon(Icons.settings_outlined, color: darkBlue),
         centerTitle: true,
         title: const Text(
           'أرباحي',
@@ -45,25 +45,6 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
             fontSize: 18,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.arrow_forward_ios,
-              color: darkBlue,
-              size: 18,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CompanyCommissionScreen(),
-                ), // تأكدي أن اسم الكلاس لصفحة العمولة هو هذا أو ما يشابهه
-              );
-            },
-
-            // TODO: Back navigation
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -90,7 +71,6 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
                 final ridesCount = summary?.ridesCount ?? 0;
                 final distance = summary?.totalDistanceKm ?? 0;
                 final avgRide = summary?.averagePerRide ?? 0;
-                final commission = summary?.commissionOwed ?? 0;
                 final periodLabel = summary?.period.isNotEmpty == true ? summary!.period : _selectedPeriod;
 
                 return Container(
@@ -233,7 +213,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
                             return Column(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                _buildBarChartColumn(height, false,
+                                _buildBarChartColumn(height.toDouble(), false,
                                     barColor: tealColor),
                                 const SizedBox(height: 6),
                                 Text(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../driver_ratings/view/driver_ratings_screen.dart';
 import '../controller/trip_history_controller.dart';
 import '../model/trip_history_model.dart';
 
@@ -50,15 +49,9 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.arrow_forward_ios, color: darkBlue, size: 18),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DriverRatingsScreen(),
-                ),
-              );
-            },
+            icon: Icon(Icons.refresh, color: darkBlue),
+            tooltip: 'تحديث',
+            onPressed: _loadTrips,
           ),
         ],
       ),
@@ -109,24 +102,38 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           Expanded(
             child: GetBuilder<TripHistoryController>(
               builder: (controller) {
-                if (controller.isLoading) {
+                // مؤشّر التحميل الكامل يظهر فقط عند التحميل الأول (لا يوجد بيانات).
+                if (controller.isLoading && controller.trips.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (controller.trips.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'لا توجد رحلات حتى الآن',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  itemCount: controller.trips.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    return _buildTripCard(controller.trips[index]);
-                  },
+                return RefreshIndicator(
+                  color: tealColor,
+                  onRefresh: _loadTrips,
+                  child: controller.trips.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 140),
+                            Center(
+                              child: Text(
+                                'لا توجد رحلات حتى الآن',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
+                          itemCount: controller.trips.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            return _buildTripCard(
+                                controller, controller.trips[index]);
+                          },
+                        ),
                 );
               },
             ),
@@ -136,17 +143,24 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     );
   }
 
-  Widget _buildTripCard(TripHistoryModel trip) {
+  Widget _buildTripCard(TripHistoryController c, TripHistoryModel trip) {
     final statusColor = trip.status == 'completed'
         ? tealColor
         : trip.status == 'cancelled'
             ? const Color(0xFFE74C3C)
             : Colors.grey;
 
-    final formattedFare = trip.finalFare.toString().replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => ',',
-    );
+    String money(double v) => v.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'\B(?=(\d{3})+(?!\d))'),
+          (m) => ',',
+        );
+    final formattedFare = money(trip.finalFare);
+    final formattedEarning = money(trip.driverEarning);
+    final statusLabel = trip.status == 'completed'
+        ? 'مكتملة'
+        : trip.status == 'cancelled'
+            ? 'ملغاة'
+            : trip.status;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -194,7 +208,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  trip.status,
+                  statusLabel,
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 10,
@@ -207,14 +221,33 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'الأجرة: ل.س $formattedFare',
-                style: TextStyle(
-                  color: darkBlue,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // صافي أرباح السائق (بعد العمولة) — هو الأهم للسائق.
+                  if (trip.status == 'completed' && trip.driverEarning > 0)
+                    Text(
+                      'أرباحك: ل.س $formattedEarning',
+                      style: TextStyle(
+                        color: tealColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  // إجمالي أجرة الرحلة (ما يدفعه الزبون) — يطابق ما يراه العميل.
+                  Text(
+                    'إجمالي الأجرة: ل.س $formattedFare',
+                    style: TextStyle(
+                      color: darkBlue,
+                      fontSize: 12,
+                      fontWeight: trip.driverEarning > 0
+                          ? FontWeight.normal
+                          : FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               Text(
                 trip.completedAt.split('T').first,
@@ -222,8 +255,93 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               ),
             ],
           ),
+          if (trip.customerId > 0) ...[
+            const Divider(height: 20),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _blockButton(c, trip),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// زر حظر الزبون: يعرض التحميل أثناء الطلب و"محظور" بعد نجاحه.
+  Widget _blockButton(TripHistoryController c, TripHistoryModel trip) {
+    const Color danger = Color(0xFFE74C3C);
+    final bool isBlocking = c.blockingCustomerId == trip.customerId;
+    final bool isBlocked = c.blockedCustomerIds.contains(trip.customerId);
+
+    if (isBlocked) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: Text('محظور',
+            style: TextStyle(
+                color: danger, fontSize: 12, fontWeight: FontWeight.bold)),
+      );
+    }
+
+    return TextButton.icon(
+      onPressed: isBlocking ? null : () => _confirmBlock(c, trip),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        minimumSize: const Size(0, 32),
+      ),
+      icon: isBlocking
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: danger),
+            )
+          : const Icon(Icons.block, size: 16, color: danger),
+      label: const Text('حظر الزبون',
+          style: TextStyle(color: danger, fontSize: 12)),
+    );
+  }
+
+  /// حوار تأكيد الحظر مع حقل سبب اختياري.
+  Future<void> _confirmBlock(
+      TripHistoryController c, TripHistoryModel trip) async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await Get.dialog<bool>(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('حظر الزبون'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('هل تريد حظر ${trip.customerName}؟ '
+                  'لن تصلك طلباته في المستقبل.'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 2,
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(
+                    hintText: 'سبب الحظر (اختياري)', isDense: true),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () => Get.back(result: true),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE74C3C)),
+              child: const Text('حظر', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      await c.blockCustomer(trip.customerId, reason: reasonCtrl.text.trim());
+    }
   }
 }

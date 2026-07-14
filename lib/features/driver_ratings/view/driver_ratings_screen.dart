@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../driver_profile/view/driver_profile_screen.dart';
+import 'package:get/get.dart';
+
+import '../controller/driver_ratings_controller.dart';
+import '../model/rating_model.dart';
 
 class DriverRatingsScreen extends StatelessWidget {
   const DriverRatingsScreen({super.key});
@@ -8,104 +11,92 @@ class DriverRatingsScreen extends StatelessWidget {
   final Color tealColor = const Color(0xFF00B4A0);
   final Color darkBlue = const Color(0xFF0D3E46);
   final Color bgLight = const Color(0xFFF7F9FA);
+  final Color starColor = const Color(0xFFFFB822);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black), // السهم
-          onPressed: () {
-            Navigator.pop(
-              context,
-            ); // هذا الأمر يقوم بإغلاق الصفحة الحالية والعودة للخلف
-          },
-        ),
-        title: Text(
-          'تقييماتي',
-          style: TextStyle(
-            color: darkBlue,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.arrow_forward_ios, color: darkBlue, size: 18),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DriverProfileScreen(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. كرت إجمالي التقييمات والنجوم والنسب المئوية
-            _buildSummaryCard(),
-
-            const SizedBox(height: 20),
-
-            // 2. كرت اتجاه التقييم عبر الأشهر (الرسم البياني المبسط)
-            _buildTrendCard(),
-
-            const SizedBox(height: 25),
-
-            // 3. قسم أحدث التعليقات
-            Text(
-              'أحدث التعليقات',
-              textAlign: TextAlign.right,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: GetBuilder<DriverRatingsController>(
+        initState: (_) => Get.find<DriverRatingsController>().load(),
+        builder: (controller) => Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black), // السهم
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                ); // هذا الأمر يقوم بإغلاق الصفحة الحالية والعودة للخلف
+              },
+            ),
+            title: Text(
+              'تقييماتي',
               style: TextStyle(
                 color: darkBlue,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 18,
               ),
             ),
-            const SizedBox(height: 12),
+          ),
+          body: controller.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. كرت إجمالي التقييمات والنجوم والنسب المئوية
+                      _buildSummaryCard(controller),
 
-            _buildCommentCard(
-              name: 'أحمد العلي',
-              initials: 'أ',
-              avatarColor: const Color(0xFF1F5E6B),
-              time: 'منذ ١٤ د',
-              rating: 5,
-              comment: 'سائق محترم جداً وقيادة آمنة، أنصح به بشدة!',
-            ),
-            _buildCommentCard(
-              name: 'ليلى مرعي',
-              initials: 'ل',
-              avatarColor: const Color(0xFF9B6BFF),
-              time: '٩:١٢ ص',
-              rating: 4,
-              comment: 'لطيف ودقيق في الموعد، السيارة نظيفة.',
-            ),
-            _buildCommentCard(
-              name: 'خليل العطار',
-              initials: 'خ',
-              avatarColor: const Color(0xFFF39C12),
-              time: 'أمس',
-              rating: 5,
-              comment: 'خدمة ممتازة وسريع بالوصول.',
-            ),
-          ],
+                      const SizedBox(height: 25),
+
+                      // 2. قسم أحدث التعليقات
+                      Text(
+                        'أحدث التعليقات',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: darkBlue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (controller.ratings.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 40),
+                          child: Text(
+                            'لا توجد تقييمات بعد',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
+                          ),
+                        )
+                      else
+                        ...controller.ratings
+                            .map((rating) => _buildCommentCard(rating)),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
   }
 
   // ويدجت بناء كرت إجمالي التقييمات (القسم العلوي)
-  Widget _buildSummaryCard() {
+  Widget _buildSummaryCard(DriverRatingsController controller) {
+    final summary = controller.summary;
+    final double average = summary?.average ?? 0;
+    final int totalCount = summary?.totalCount ?? 0;
+    final Map<int, int> distribution = summary?.distribution ?? const {};
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -118,11 +109,18 @@ class DriverRatingsScreen extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _buildRatingBar(5, 0.8, '٨٠%'),
-                _buildRatingBar(4, 0.15, '١٥%'),
-                _buildRatingBar(3, 0.03, '٣%'),
-                _buildRatingBar(2, 0.01, '١%'),
-                _buildRatingBar(1, 0.01, '١%'),
+                for (int star = 5; star >= 1; star--)
+                  _buildRatingBar(
+                    star,
+                    totalCount == 0
+                        ? 0
+                        : (distribution[star] ?? 0) / totalCount,
+                    totalCount == 0
+                        ? '٠%'
+                        : _toArabicPercent(
+                            ((distribution[star] ?? 0) / totalCount) * 100,
+                          ),
+                  ),
               ],
             ),
           ),
@@ -132,7 +130,7 @@ class DriverRatingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                '٤.٩',
+                _toArabicNumber(average.toStringAsFixed(1)),
                 style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
@@ -142,17 +140,17 @@ class DriverRatingsScreen extends StatelessWidget {
               Row(
                 children: List.generate(
                   5,
-                  (index) => const Icon(
-                    Icons.star,
-                    color: Color(0xFFFFB822),
+                  (index) => Icon(
+                    index < average.round() ? Icons.star : Icons.star_border,
+                    color: starColor,
                     size: 16,
                   ),
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'من ١٨٢ تقييم',
-                style: TextStyle(color: Colors.grey, fontSize: 11),
+              Text(
+                'من ${_toArabicNumber(totalCount.toString())} تقييم',
+                style: const TextStyle(color: Colors.grey, fontSize: 11),
               ),
             ],
           ),
@@ -178,7 +176,7 @@ class DriverRatingsScreen extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: progress,
+                value: progress.clamp(0.0, 1.0),
                 backgroundColor: Colors.grey.shade200,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   starNum >= 4
@@ -201,87 +199,19 @@ class DriverRatingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(Icons.star, color: Color(0xFFFFB822), size: 11),
-        ],
-      ),
-    );
-  }
-
-  // كرت اتجاه التقييم (الرسم البياني عبر الأشهر)
-  Widget _buildTrendCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: tealColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'ثابت +',
-                  style: TextStyle(
-                    color: tealColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Text(
-                'اتجاه التقييم',
-                style: TextStyle(
-                  color: darkBlue,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // شكل منحنى بياني محاكي للتصميم الأصلي باستخدام CustomPaint ليعطي جمالية ومظهر حقيقي
-          SizedBox(
-            height: 60,
-            child: CustomPaint(painter: _TrendLinePainter(tealColor)),
-          ),
-          const SizedBox(height: 10),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text('مايو', style: TextStyle(color: Colors.grey, fontSize: 10)),
-              Text('أبريل', style: TextStyle(color: Colors.grey, fontSize: 10)),
-              Text('مارس', style: TextStyle(color: Colors.grey, fontSize: 10)),
-              Text(
-                'فبراير',
-                style: TextStyle(color: Colors.grey, fontSize: 10),
-              ),
-              Text('يناير', style: TextStyle(color: Colors.grey, fontSize: 10)),
-            ],
-          ),
+          Icon(Icons.star, color: starColor, size: 11),
         ],
       ),
     );
   }
 
   // كرت التعليق الفردي للمستخدمين
-  Widget _buildCommentCard({
-    required String name,
-    required String initials,
-    required Color avatarColor,
-    required String time,
-    required int rating,
-    required String comment,
-  }) {
+  Widget _buildCommentCard(RatingModel rating) {
+    final String name =
+        rating.customerName.isEmpty ? 'عميل' : rating.customerName;
+    final String initials = name.trim().isEmpty ? '؟' : name.trim()[0];
+    final String comment = (rating.comment ?? '').trim();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -296,7 +226,7 @@ class DriverRatingsScreen extends StatelessWidget {
           Row(
             children: [
               Text(
-                time,
+                _formatDate(rating.createdAt),
                 style: const TextStyle(color: Colors.grey, fontSize: 10),
               ),
               const Spacer(),
@@ -318,8 +248,8 @@ class DriverRatingsScreen extends StatelessWidget {
                       5,
                       (index) => Icon(
                         Icons.star,
-                        color: index < rating
-                            ? const Color(0xFFFFB822)
+                        color: index < rating.score
+                            ? starColor
                             : Colors.grey.shade300,
                         size: 12,
                       ),
@@ -330,7 +260,7 @@ class DriverRatingsScreen extends StatelessWidget {
               const SizedBox(width: 12),
               CircleAvatar(
                 radius: 16,
-                backgroundColor: avatarColor,
+                backgroundColor: _avatarColor(name),
                 child: Text(
                   initials,
                   style: const TextStyle(
@@ -342,56 +272,57 @@ class DriverRatingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Divider(height: 1, color: Color(0xFFF1F1F1)),
-          ),
-          Text(
-            comment,
-            textAlign: TextAlign.right,
-            style: TextStyle(color: darkBlue, fontSize: 12, height: 1.4),
-          ),
+          if (comment.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Divider(height: 1, color: Color(0xFFF1F1F1)),
+            ),
+            Text(
+              comment,
+              textAlign: TextAlign.right,
+              style: TextStyle(color: darkBlue, fontSize: 12, height: 1.4),
+            ),
+          ],
         ],
       ),
     );
   }
-}
 
-// كلاس لرسم خط المنحنى
-class _TrendLinePainter extends CustomPainter {
-  final Color lineColor;
-  _TrendLinePainter(this.lineColor);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    // إحداثيات لرسم خط متعرج صاعد
-    path.moveTo(size.width, size.height * 0.6);
-    path.lineTo(size.width * 0.75, size.height * 0.4);
-    path.lineTo(size.width * 0.5, size.height * 0.55);
-    path.lineTo(size.width * 0.25, size.height * 0.3);
-    path.lineTo(0, size.height * 0.35);
-
-    //رسم الظل الفاتح
-    final fillPath = Path.from(path)
-      ..lineTo(0, size.height)
-      ..lineTo(size.width, size.height)
-      ..close();
-
-    final fillPaint = Paint()
-      ..color = lineColor.withOpacity(0.08)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
+  // لون ثابت للأفاتار مشتق من الاسم للحفاظ على مظهر متنوع كالتصميم الأصلي
+  Color _avatarColor(String name) {
+    const colors = [
+      Color(0xFF1F5E6B),
+      Color(0xFF9B6BFF),
+      Color(0xFFF39C12),
+      Color(0xFF00B4A0),
+      Color(0xFFE67E22),
+    ];
+    if (name.isEmpty) return colors.first;
+    return colors[name.codeUnitAt(0) % colors.length];
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  // تحويل تاريخ ISO إلى صيغة مختصرة (يوم/شهر) أو إرجاعه كما هو عند الفشل
+  String _formatDate(String raw) {
+    if (raw.isEmpty) return '';
+    final date = DateTime.tryParse(raw);
+    if (date == null) return raw;
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    return _toArabicNumber('$d/$m');
+  }
+
+  String _toArabicPercent(double value) {
+    return '${_toArabicNumber(value.round().toString())}%';
+  }
+
+  // تحويل الأرقام اللاتينية إلى أرقام عربية للتناسق مع باقي التصميم
+  String _toArabicNumber(String input) {
+    const western = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    var result = input;
+    for (var i = 0; i < western.length; i++) {
+      result = result.replaceAll(western[i], arabic[i]);
+    }
+    return result;
+  }
 }
