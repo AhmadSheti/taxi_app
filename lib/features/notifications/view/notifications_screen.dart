@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../home/controller/home_controller.dart';
 import '../controller/notifications_controller.dart';
 import '../model/notification_model.dart';
 
@@ -22,30 +23,23 @@ class NotificationsScreen extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: GetBuilder<NotificationsController>(
-        initState: (_) => Get.find<NotificationsController>().fetchNotifications(),
+        // عند فتح الشاشة: نجلب الإشعارات ونُعلّمها كمقروءة تلقائياً على السيرفر.
+        initState: (_) => Get.find<NotificationsController>().openNotifications(),
         builder: (controller) => Scaffold(
           backgroundColor: background,
           appBar: AppBar(
             backgroundColor: background,
             elevation: 0,
-            automaticallyImplyLeading: false,
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: controller.markAllAsRead,
-                  child: const Text('تحديد الكل كمقروء',
-                      style: TextStyle(
-                          color: primaryBlue,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold)),
-                ),
-                const Text('الإشعارات',
-                    style: TextStyle(
-                        color: textDark, fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 40),
-              ],
+            centerTitle: true,
+            // زر رجوع يعيدنا إلى تبويب الرئيسية (الإشعارات تبويب وليست شاشة مدفوعة).
+            // BackButton يعرض الأيقونة الصحيحة تلقائياً حسب اتجاه اللغة (RTL).
+            leading: BackButton(
+              color: textDark,
+              onPressed: () => Get.find<HomeController>().changeTab(0),
             ),
+            title: const Text('الإشعارات',
+                style: TextStyle(
+                    color: textDark, fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           body: _buildBody(controller),
         ),

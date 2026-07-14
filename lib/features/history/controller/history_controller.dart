@@ -1,108 +1,80 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/models/ride_model.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
+import '../../blocked_drivers/controller/blocked_drivers_controller.dart';
 
+/// كنترولر سجلّ الرحلات: يجلب رحلات العميل (الكل / مكتملة / ملغاة).
 class HistoryController extends GetxController {
   bool isLoading = false;
-  bool hasError = false;
-  String errorMessage = '';
+  List<RideModel> rides = [];
+  String filter = 'all'; // all | completed | cancelled
 
-  String selectedTab = 'الكل';
-  String statusFilter = 'all';
-  int currentPage = 1;
-  int lastPage = 1;
-  int total = 0;
-  final int perPage = 20;
+  /// معرّف السائق الجاري حظره حالياً (لعرض مؤشّر التحميل على الزر).
+  int? blockingDriverId;
 
-  final List<Map<String, String>> tabs = [
-    {'label': 'الكل', 'status': 'all'},
-    {'label': 'اليوم', 'status': 'all'},
-    {'label': 'مكتملة', 'status': 'completed'},
-    {'label': 'ملغاة', 'status': 'cancelled'},
-  ];
+  /// معرّفات السائقين الذين حُظِروا لتوّهم من هذه الشاشة (لتحديث حالة الزر).
+  final Set<int> blockedDriverIds = {};
 
-  final List<Map<String, dynamic>> trips = [];
-
-  List<Map<String, dynamic>> get visibleTrips {
-    if (selectedTab == 'اليوم') {
-      final now = DateTime.now();
-      return trips.where((trip) {
-        final completedAt = trip['completed_at'];
-        if (completedAt is String) {
-          final date = DateTime.tryParse(completedAt);
-          if (date != null) {
-            return date.year == now.year &&
-                date.month == now.month &&
-                date.day == now.day;
-          }
-        }
-        return false;
-      }).toList();
-    }
-    return trips;
-  }
-
-  @override
-  void onInit() {
-    super.onInit();
-    fetchHistory();
-  }
-
-  void setSelectedTab(String tab) {
-    selectedTab = tab;
-    statusFilter = tabs.firstWhere((item) => item['label'] == tab)['status']!;
-    currentPage = 1;
-    fetchHistory();
-  }
-
-  Future<void> fetchHistory({int page = 1}) async {
+  Future<void> fetchRides() async {
     isLoading = true;
-    hasError = false;
-    errorMessage = '';
+    update();
+    final res = await ApiService.instance.makeRequest(
+      method: ApiMethod.get,
+      endPoint: EndPoints.rides,
+      queryParams: {'status': filter},
+    );
+    isLoading = false;
+    res.fold(
+      (_) {},
+      (data) {
+        final List list = data['data'] ?? [];
+        rides = list.map((e) => RideModel.fromJson(e)).toList();
+      },
+    );
+    update();
+  }
+
+  void setFilter(String f) {
+    filter = f;
+    update();
+    fetchRides();
+  }
+
+  /// حظر سائق: يمنع مطابقة العميل مع هذا السائق في الرحلات القادمة.
+  Future<void> blockDriver(int driverId, {String? reason}) async {
+    if (blockingDriverId != null) return;
+    blockingDriverId = driverId;
     update();
 
-    final result = await ApiService.instance.makeRequest(
-      method: ApiMethod.get,
-      endPoint: 'api/customer/rides',
-      queryParams: {'status': statusFilter, 'page': page, 'per_page': perPage},
-    );
-
-    isLoading = false;
-    result.fold(
-      (error) {
-        hasError = true;
-        errorMessage = error;
-        trips.clear();
-        update();
-      },
-      (data) {
-        final responseData = data['data'] ?? data;
-        trips.clear();
-        if (responseData is List) {
-          for (final item in responseData) {
-            if (item is Map<String, dynamic>) {
-              trips.add(item);
-            } else if (item is Map) {
-              trips.add(Map<String, dynamic>.from(item));
-            }
-          }
-        }
-
-        final pagination = data['pagination'];
-        if (pagination is Map<String, dynamic>) {
-          currentPage =
-              int.tryParse(pagination['current_page']?.toString() ?? '') ??
-              currentPage;
-          lastPage =
-              int.tryParse(pagination['last_page']?.toString() ?? '') ??
-              lastPage;
-          total = int.tryParse(pagination['total']?.toString() ?? '') ?? total;
-        }
-
-        update();
+    final res = await ApiService.instance.makeRequest(
+      method: ApiMethod.post,
+      endPoint: EndPoints.blocks,
+      body: {
+        'driver_id': driverId,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
       },
     );
+
+    blockingDriverId = null;
+    res.fold(
+      (error) => Get.snackbar('خطأ', error,
+          backgroundColor: Colors.red.shade100,
+          snackPosition: SnackPosition.BOTTOM),
+      (_) {
+        blockedDriverIds.add(driverId);
+        Get.snackbar('تم', 'تم حظر السائق ولن تتم مطابقتك معه مجدداً',
+            backgroundColor: Colors.green.shade100,
+            snackPosition: SnackPosition.BOTTOM);
+        // مزامنة قائمة المحظورين إن كانت شاشتها مفتوحة.
+        if (Get.isRegistered<BlockedDriversController>()) {
+          Get.find<BlockedDriversController>().fetchBlocked();
+        }
+      },
+    );
+    update();
   }
 }

@@ -4,109 +4,59 @@ import 'package:get/get.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/api_method.dart';
 import '../../../core/network/api_service.dart';
+import '../../../core/storage/app_storage.dart';
+import '../../welcome/view/welcome_screen.dart';
 
+/// كنترولر الملف الشخصي: يجلب بيانات العميل وإحصائياته، ويسجّل الخروج.
 class ProfileController extends GetxController {
   bool isLoading = false;
-  bool isSubmitting = false;
-  bool hasError = false;
-  String errorMessage = '';
-  String successMessage = '';
-
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController avatarController = TextEditingController();
-
-  String memberSince = '';
-  String ridesCount = '0';
-  String ratingAverage = '0.0';
-  String favoritesCount = '0';
-
-  @override
-  void onInit() {
-    super.onInit();
-    fetchProfile();
-  }
+  String name = '';
+  String email = '';
+  String phone = '';
+  int totalRides = 0;
+  int completedRides = 0;
 
   Future<void> fetchProfile() async {
     isLoading = true;
-    hasError = false;
-    errorMessage = '';
     update();
-
-    final result = await ApiService.instance.makeRequest(
+    final res = await ApiService.instance.makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.profile,
     );
-
     isLoading = false;
-    result.fold(
-      (error) {
-        hasError = true;
-        errorMessage = error;
-        update();
-      },
-      (data) {
-        final responseData = data['data'] ?? data;
-        if (responseData is Map<String, dynamic>) {
-          nameController.text = responseData['name']?.toString() ?? '';
-          emailController.text = responseData['email']?.toString() ?? '';
-          phoneController.text = responseData['phone']?.toString() ?? '';
-          memberSince = responseData['member_since']?.toString() ?? '';
-
-          final stats = responseData['stats'];
-          if (stats is Map<String, dynamic>) {
-            ridesCount = stats['rides_count']?.toString() ?? ridesCount;
-            ratingAverage =
-                stats['rating_average']?.toString() ?? ratingAverage;
-            favoritesCount =
-                stats['favorites_count']?.toString() ?? favoritesCount;
-          }
-        }
-        update();
-      },
-    );
-  }
-
-  Future<void> updateProfile() async {
-    if (isSubmitting) return;
-    isSubmitting = true;
-    hasError = false;
-    errorMessage = '';
-    successMessage = '';
+    res.fold((_) {}, (data) {
+      final d = data['data'] ?? {};
+      name = d['name'] ?? '';
+      email = d['email'] ?? '';
+      phone = d['phone'] ?? '';
+      final stats = d['stats'] ?? {};
+      totalRides = stats['total_rides'] ?? 0;
+      completedRides = stats['completed_rides'] ?? 0;
+    });
     update();
-
-    final result = await ApiService.instance.makeRequest(
-      method: ApiMethod.put,
-      endPoint: EndPoints.profile,
-      body: {
-        'name': nameController.text.trim(),
-        'email': emailController.text.trim(),
-        'phone': phoneController.text.trim(),
-        'avatar': avatarController.text.trim(),
-      },
-    );
-
-    isSubmitting = false;
-    result.fold(
-      (error) {
-        hasError = true;
-        errorMessage = error;
-        update();
-      },
-      (data) {
-        successMessage = data['message']?.toString() ?? 'تم تحديث الملف الشخصي';
-        update();
-      },
-    );
   }
 
-  @override
-  void onClose() {
-    nameController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    avatarController.dispose();
-    super.onClose();
+  Future<void> logout() async {
+    // نُخبر السيرفر (اختياري) ثم نحذف التوكن محلياً ونعود لشاشة الترحيب.
+    await ApiService.instance.makeRequest(
+      method: ApiMethod.post,
+      endPoint: EndPoints.logout,
+    );
+    await AppStorage.clear();
+    Get.offAll(() => const WelcomeScreen());
+  }
+
+  void confirmLogout() {
+    Get.defaultDialog(
+      title: 'تسجيل الخروج',
+      middleText: 'هل تريد تسجيل الخروج؟',
+      textConfirm: 'خروج',
+      textCancel: 'إلغاء',
+      confirmTextColor: Colors.white,
+      onConfirm: () {
+        Get.back();
+        logout();
+      },
+    );
   }
 }

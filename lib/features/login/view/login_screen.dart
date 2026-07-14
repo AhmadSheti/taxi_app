@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../constants.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../controller/login_controller.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -26,23 +27,7 @@ class LoginScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryTeal,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text(
-                        'م',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.secondaryAmber,
-                        ),
-                      ),
-                    ),
-                  ),
+                  const Center(child: AppLogo(size: 100)),
                   const SizedBox(height: 10),
                   const Center(
                     child: Text(

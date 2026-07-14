@@ -1,371 +1,259 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../constants.dart'; // استدعاء ملف الثوابت والألوان الموحد لمشروع مشوار
+
+import '../../../constants.dart';
+import '../../../core/models/ride_model.dart';
+import '../../report_issue/view/report_issue_screen.dart';
 import '../controller/history_controller.dart';
 
-class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({Key? key}) : super(key: key);
-
-  @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
-}
-
-class _HistoryScreenState extends State<HistoryScreen> {
-  late final HistoryController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = Get.put(HistoryController());
-  }
+class HistoryScreen extends StatelessWidget {
+  const HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl, // دعم الاتجاه العربي RTL
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0.5,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textMain),
-            onPressed: () => Navigator.of(context).pop(),
+    return GetBuilder<HistoryController>(
+      init: HistoryController()..fetchRides(),
+      builder: (c) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('رحلاتي',
+                style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.bold)),
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh, color: AppColors.textMain),
+                tooltip: 'تحديث',
+                onPressed: c.fetchRides,
+              ),
+            ],
           ),
-          title: const Text(
-            'رحلاتي',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: AppColors.textMain,
-            ),
+          body: Column(
+            children: [
+              _filters(c),
+              Expanded(child: _body(c)),
+            ],
           ),
-          centerTitle: true,
         ),
-        body: GetBuilder<HistoryController>(
-          builder: (controller) {
-            return Column(
-              children: [
-                // 1. شريط التبويبات العلوي للتصفية (Tabs)
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 16,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: controller.tabs.map((tabData) {
-                      final tab = tabData['label']!;
-                      final bool isSelected = controller.selectedTab == tab;
-                      return GestureDetector(
-                        onTap: () {
-                          controller.setSelectedTab(tab);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primaryTeal
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            border: isSelected
-                                ? null
-                                : Border.all(
-                                    color: const Color(0xFFE4EEF1),
-                                    width: 1,
-                                  ),
-                          ),
-                          child: Text(
-                            tab,
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              fontSize: 14,
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 8),
+      ),
+    );
+  }
 
-                if (controller.isLoading)
-                  const Expanded(
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (controller.hasError)
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        controller.errorMessage,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  )
-                else if (controller.visibleTrips.isEmpty)
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.history,
-                            size: 64,
-                            color: AppColors.textSecondary.withOpacity(0.4),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'لا توجد رحلات في هذا القسم حالياً',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 15,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: controller.visibleTrips.length,
-                      itemBuilder: (context, index) {
-                        final trip = controller.visibleTrips[index];
-                        final bool isCompleted = trip['status'] == 'completed';
-                        final driver = trip['driver'];
-                        final driverName = driver is Map
-                            ? driver['name']?.toString() ?? ''
-                            : '';
-                        final driverRating = driver is Map
-                            ? driver['rating_average']?.toString() ?? ''
-                            : '';
-                        final pickup = trip['pickup_address']?.toString() ?? '';
-                        final destination =
-                            trip['destination_address']?.toString() ?? '';
-                        final date = trip['completed_at']?.toString() ?? '';
-                        final fare = trip['final_fare']?.toString() ?? '';
+  Widget _filters(HistoryController c) {
+    Widget chip(String label, String value) {
+      final active = c.filter == value;
+      return Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: ChoiceChip(
+          label: Text(label),
+          selected: active,
+          onSelected: (_) => c.setFilter(value),
+          selectedColor: AppColors.primaryTeal,
+          labelStyle: TextStyle(
+              color: active ? Colors.white : AppColors.textMain,
+              fontWeight: FontWeight.bold),
+          backgroundColor: AppColors.cardWhite,
+        ),
+      );
+    }
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                spreadRadius: 1,
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // ترويسة البطاقة: اسم السائق والحالة المالية
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundColor: AppColors.primaryTeal
-                                              .withOpacity(0.1),
-                                          child: const Icon(
-                                            Icons.person,
-                                            color: AppColors.primaryTeal,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              driverName,
-                                              style: const TextStyle(
-                                                fontFamily: 'Cairo',
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                                color: AppColors.textMain,
-                                              ),
-                                            ),
-                                            Text(
-                                              driverRating.isNotEmpty
-                                                  ? 'تقييم السائق: $driverRating'
-                                                  : '',
-                                              style: const TextStyle(
-                                                fontFamily: 'Cairo',
-                                                fontSize: 11,
-                                                color: AppColors.textSecondary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    // شارة حالة الرحلة (مكتملة باللون الأخضر / ملغاة باللون الأحمر)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 4,
-                                        horizontal: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isCompleted
-                                            ? AppColors.success.withOpacity(0.1)
-                                            : AppColors.danger.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        isCompleted ? 'مكتملة' : 'ملغاة',
-                                        style: TextStyle(
-                                          fontFamily: 'Cairo',
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: isCompleted
-                                              ? AppColors.success
-                                              : AppColors.danger,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: Divider(
-                                    color: Color(0xFFE4EEF1),
-                                    height: 1,
-                                  ),
-                                ),
-                                // مسار الرحلة (الانطلاق والوصول)
-                                Row(
-                                  children: [
-                                    Column(
-                                      children: [
-                                        const Icon(
-                                          Icons.circle,
-                                          size: 12,
-                                          color: AppColors.primaryTeal,
-                                        ),
-                                        Container(
-                                          width: 2,
-                                          height: 24,
-                                          color: const Color(0xFFE4EEF1),
-                                        ),
-                                        const Icon(
-                                          Icons.location_on,
-                                          size: 14,
-                                          color: AppColors.secondaryAmber,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            pickup,
-                                            style: const TextStyle(
-                                              fontFamily: 'Cairo',
-                                              fontSize: 13,
-                                              color: AppColors.textMain,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            destination,
-                                            style: const TextStyle(
-                                              fontFamily: 'Cairo',
-                                              fontSize: 13,
-                                              color: AppColors.textMain,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: Divider(
-                                    color: Color(0xFFE4EEF1),
-                                    height: 1,
-                                  ),
-                                ),
-                                // تذييل البطاقة: الوقت والتكلفة المادية للرحلة
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.access_time,
-                                          size: 16,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          date,
-                                          style: const TextStyle(
-                                            fontFamily: 'Cairo',
-                                            fontSize: 12,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (isCompleted)
-                                      Text(
-                                        fare.isNotEmpty ? '$fare ل.س' : '-',
-                                        style: const TextStyle(
-                                          fontFamily: 'Cairo',
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: AppColors.primaryTeal,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          chip('الكل', 'all'),
+          chip('مكتملة', 'completed'),
+          chip('ملغاة', 'cancelled'),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(HistoryController c) {
+    // مؤشّر التحميل الكامل يظهر فقط عند التحميل الأول (لا توجد بيانات).
+    if (c.isLoading && c.rides.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return RefreshIndicator(
+      color: AppColors.primaryTeal,
+      onRefresh: c.fetchRides,
+      child: c.rides.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 140),
+                Center(
+                    child: Text('لا توجد رحلات',
+                        style: TextStyle(color: AppColors.textSecondary))),
               ],
-            );
-          },
+            )
+          : ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: c.rides.length,
+              itemBuilder: (_, i) => _rideCard(c, c.rides[i]),
+            ),
+    );
+  }
+
+  Widget _rideCard(HistoryController c, RideModel r) {
+    final Color statusColor = r.isCompleted
+        ? AppColors.success
+        : r.isCancelled
+            ? AppColors.danger
+            : AppColors.secondaryAmber;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: AppColors.cardWhite, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(r.driverName ?? 'رحلة',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.textMain)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text(r.statusLabel,
+                    style: TextStyle(color: statusColor, fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _line(Icons.circle, r.pickupAddress ?? '-', AppColors.primaryTeal),
+          _line(Icons.location_on, r.destinationAddress ?? '-', AppColors.danger),
+          const Divider(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('${(r.finalFare ?? r.estimatedFare).toStringAsFixed(0)} ل.س',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.textMain)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (r.driverId != null) _blockButton(c, r),
+                  if (r.isCompleted && r.driverId != null)
+                    TextButton.icon(
+                      onPressed: () => Get.to(() => ReportIssueScreen(
+                            reportedId: r.driverId!,
+                            rideId: r.id,
+                            driverName: r.driverName,
+                          )),
+                      icon: const Icon(Icons.flag_outlined,
+                          size: 16, color: AppColors.danger),
+                      label: const Text('إبلاغ',
+                          style: TextStyle(color: AppColors.danger, fontSize: 12)),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// زر حظر السائق: يعرض التحميل أثناء الطلب و"محظور" بعد نجاحه.
+  Widget _blockButton(HistoryController c, RideModel r) {
+    final int driverId = r.driverId!;
+    final bool isBlocking = c.blockingDriverId == driverId;
+    final bool isBlocked = c.blockedDriverIds.contains(driverId);
+
+    if (isBlocked) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: Text('محظور',
+            style: TextStyle(
+                color: AppColors.danger,
+                fontSize: 12,
+                fontWeight: FontWeight.bold)),
+      );
+    }
+
+    return TextButton.icon(
+      onPressed: isBlocking ? null : () => _confirmBlock(c, r),
+      icon: isBlocking
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.danger),
+            )
+          : const Icon(Icons.block, size: 16, color: AppColors.danger),
+      label: const Text('حظر',
+          style: TextStyle(color: AppColors.danger, fontSize: 12)),
+    );
+  }
+
+  /// حوار تأكيد الحظر مع حقل سبب اختياري.
+  Future<void> _confirmBlock(HistoryController c, RideModel r) async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await Get.dialog<bool>(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('حظر السائق'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'هل تريد حظر ${r.driverName ?? 'هذا السائق'}؟ '
+                'لن تتم مطابقتك معه في الرحلات القادمة.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 2,
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(
+                    hintText: 'سبب الحظر (اختياري)', isDense: true),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () => Get.back(result: true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+              child: const Text('حظر', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         ),
+      ),
+    );
+
+    if (confirmed == true) {
+      await c.blockDriver(r.driverId!, reason: reasonCtrl.text.trim());
+    }
+  }
+
+  Widget _line(IconData icon, String text, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppStyles.bodyRegular)),
+        ],
       ),
     );
   }
