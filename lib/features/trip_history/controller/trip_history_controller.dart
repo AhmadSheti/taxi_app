@@ -28,7 +28,7 @@ class TripHistoryController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.tripHistory,
       queryParams: {
@@ -90,7 +90,7 @@ class TripHistoryController extends GetxController {
     blockingCustomerId = customerId;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.blocks,
       body: {

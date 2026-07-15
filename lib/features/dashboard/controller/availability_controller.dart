@@ -11,7 +11,7 @@ class AvailabilityController extends GetxController {
 
   /// يجلب الحالة الحقيقية للسائق من السيرفر (online/offline/busy).
   Future<void> syncStatus() async {
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.me,
     );
@@ -27,7 +27,7 @@ class AvailabilityController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.availability,
       body: {

@@ -49,7 +49,7 @@ class AddCarController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.carTypes,
     );
@@ -116,7 +116,7 @@ class AddCarController extends GetxController {
     isLoading = true;
     update(); // أظهر التحميل
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.car,
       body: {

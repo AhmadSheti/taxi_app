@@ -29,7 +29,7 @@ class RideRequestController extends GetxController {
   /// استئناف الرحلة النشطة عند فتح/إعادة تشغيل التطبيق.
   /// يرجع الرحلة النشطة إن وُجدت (accepted / driver_arrived / in_progress) وإلا null.
   Future<RideDetailsModel?> fetchActiveRide() async {
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.activeRide,
     );
@@ -50,7 +50,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.acceptRide(rideId),
     );
@@ -91,7 +91,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.rejectRide(rideId),
       body: {
@@ -126,7 +126,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.arrivedRide(rideId),
     );
@@ -158,7 +158,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.startRide(rideId),
     );
@@ -187,7 +187,7 @@ class RideRequestController extends GetxController {
   }
 
   Future<void> sendTracking(int rideId, {required double latitude, required double longitude}) async {
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.trackingRide(rideId),
       body: {
@@ -208,7 +208,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.completeRide(rideId),
       body: {
@@ -247,7 +247,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.cancelRide(rideId),
       body: {'reason': reason},
@@ -277,7 +277,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.paymentConfirm(rideId),
     );
@@ -309,7 +309,7 @@ class RideRequestController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.rideById(rideId),
     );

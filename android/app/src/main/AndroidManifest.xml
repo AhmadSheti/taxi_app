@@ -1,6 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- مطلوبة للاتصال بالـ API. بدونها تعمل نسخة الـ debug فقط (لأن Flutter
+         يضيفها في manifest الـ debug/profile)، بينما يفشل الـ release بخطأ
+         "Failed host lookup". -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- مطلوبة لقياس مسافة الرحلة الحقيقية وإرسال موقع السائق أثناء الرحلة -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
-        android:label="new_app"
+        android:label="Mishwar Driver"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

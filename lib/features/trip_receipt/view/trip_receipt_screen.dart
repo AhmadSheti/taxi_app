@@ -64,7 +64,10 @@ class _TripReceiptScreenState extends State<TripReceiptScreen> {
               );
             }
 
-            final double total = ride.displayFare;
+            // subtotal = أجرة الرحلة قبل الخصم، amountDue = ما يدفعه الزبون فعلاً.
+            final double subtotal = ride.displayFare;
+            final double discount = ride.discountAmount;
+            final double amountDue = ride.amountDue > 0 ? ride.amountDue : subtotal;
             final double commission = ride.commissionAmount;
             final double commissionPct = ride.commissionPercentage;
             final double earning = ride.driverEarning;
@@ -125,7 +128,7 @@ class _TripReceiptScreenState extends State<TripReceiptScreen> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            Text(_money(total),
+                            Text(_money(amountDue),
                                 style: const TextStyle(
                                     color: tealColor,
                                     fontSize: 36,
@@ -194,7 +197,13 @@ class _TripReceiptScreenState extends State<TripReceiptScreen> {
                                     color: darkBlue)),
                             const Divider(height: 20),
                             _buildReceiptRow(
-                                'إجمالي الأجرة', '${_money(total)} ل.س', Colors.black),
+                                'إجمالي الأجرة', '${_money(subtotal)} ل.س', Colors.black),
+                            // سطر الخصم يظهر فقط عند تطبيق كود خصم فعلي.
+                            if (discount > 0) ...[
+                              const SizedBox(height: 10),
+                              _buildReceiptRow('خصم الكود', '- ${_money(discount)} ل.س',
+                                  const Color(0xFF00B4A0)),
+                            ],
                             const SizedBox(height: 10),
                             _buildReceiptRow(
                                 'حصة الشركة (${commissionPct.toStringAsFixed(0)}٪)',

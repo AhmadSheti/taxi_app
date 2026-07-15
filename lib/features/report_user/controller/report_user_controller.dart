@@ -55,7 +55,7 @@ class ReportUserController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.reports,
       body: body,

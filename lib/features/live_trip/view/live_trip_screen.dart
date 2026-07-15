@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,12 +18,25 @@ class LiveTripScreen extends StatefulWidget {
 class _LiveTripScreenState extends State<LiveTripScreen> {
   Timer? _tripTimer;
   Timer? _trackingTimer;
-  int _elapsedSeconds = 872; // بادئين من 14 دقيقة و32 ثانية متل الصورة
-  double _distance = 8.2; // المسافة الحالية كم
-  int _fare = 7420; // الأجرة الحالية بالليرة السورية
+  StreamSubscription<Position>? _positionSub;
+
+  // زمن ومسافة حقيقيان — يبدآن من الصفر عند بدء الرحلة.
+  int _elapsedSeconds = 0;
+  double _distance = 0; // المسافة المقطوعة فعلياً (كم) من GPS
+  Position? _lastPosition; // آخر موقع لحساب الفارق
+  bool _gpsReady = false;
+
   bool _completing = false;
   // معرّف الرحلة الحقيقي (من الكنترولر) بدل رقم ثابت.
   int get _rideId => Get.find<RideRequestController>().currentRideId;
+
+  // الأجرة حتى الآن = أجرة الأساس + (المسافة × سعر الكيلومتر) — نفس معادلة السيرفر.
+  double get _fare {
+    final ride = Get.find<RideRequestController>().currentRide;
+    final base = ride?.baseFare ?? 0;
+    final perKm = ride?.pricePerKm ?? 0;
+    return base + (_distance * perKm);
+  }
 
   @override
   void initState() {
@@ -30,24 +44,55 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
     _startTripTracking();
   }
 
-  void _startTripTracking() {
-    _tripTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _elapsedSeconds++;
-        // محاكاة بسيطة لزيادة المسافة والأجرة أثناء حركة السيارة
-        if (_elapsedSeconds % 5 == 0) {
-          _distance += 0.1;
-          _fare += 150;
-        }
-      });
+  Future<void> _startTripTracking() async {
+    // عدّاد الزمن الحقيقي
+    _tripTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _elapsedSeconds++);
     });
 
-    _trackingTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
-      final controller = Get.find<RideRequestController>();
-      await controller.sendTracking(
+    // 1) صلاحيات الموقع
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        Get.snackbar('تنبيه', 'صلاحية الموقع مطلوبة لقياس مسافة الرحلة',
+            backgroundColor: Colors.amber.shade100,
+            snackPosition: SnackPosition.BOTTOM);
+      }
+      return;
+    }
+
+    // 2) بثّ الموقع الحقيقي: نجمع المسافة فعلياً بين كل نقطتين
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // متر — نتجاهل الاهتزاز البسيط
+      ),
+    ).listen((pos) {
+      if (_lastPosition != null) {
+        final meters = Geolocator.distanceBetween(
+          _lastPosition!.latitude,
+          _lastPosition!.longitude,
+          pos.latitude,
+          pos.longitude,
+        );
+        if (mounted) setState(() => _distance += meters / 1000);
+      }
+      _lastPosition = pos;
+      if (!_gpsReady && mounted) setState(() => _gpsReady = true);
+    });
+
+    // 3) إرسال الموقع الحقيقي للسيرفر كل 10 ثوانٍ (يعتمد عليه السيرفر في التسعير)
+    _trackingTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      final pos = _lastPosition;
+      if (pos == null) return;
+      await Get.find<RideRequestController>().sendTracking(
         _rideId,
-        latitude: 33.5150,
-        longitude: 36.2740,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
       );
     });
   }
@@ -56,6 +101,7 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
   void dispose() {
     _tripTimer?.cancel();
     _trackingTimer?.cancel();
+    _positionSub?.cancel();
     super.dispose();
   }
 
@@ -185,7 +231,9 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
                               ),
                             ),
                             Text(
-                              _fare.toString().replaceAllMapped(
+                              // _fare أصبح double محسوباً من المسافة الحقيقية،
+                              // لذا نعرضه بلا كسور مع فواصل الآلاف.
+                              _fare.toStringAsFixed(0).replaceAllMapped(
                                 RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
                                 (Match m) => '${m[1]},',
                               ),

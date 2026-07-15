@@ -16,7 +16,7 @@ class DriverEarningsController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: '${EndPoints.earningsSummary}?period=$period',
     );
@@ -47,7 +47,7 @@ class DriverEarningsController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: '${EndPoints.earningsChart}?period=$period',
     );

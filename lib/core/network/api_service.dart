@@ -8,14 +8,8 @@ import '../../features/login/view/login_screen.dart';
 import 'api_constants.dart';
 import 'api_method.dart';
 
-/// خدمة الاتصال بالسيرفر.
-/// - Singleton: نسخة واحدة فقط في كل التطبيق (ApiService.instance).
-/// - makeRequest: الدالة الوحيدة التي نستخدمها لأي طلب.
-///   ترجع Either:
-///     Left(String)  = رسالة خطأ
-///     Right(dynamic) = بيانات النجاح (JSON)
 class ApiService {
-  ApiService._() {
+  ApiService() {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
@@ -45,7 +39,6 @@ class ApiService {
     ]);
   }
 
-  static final ApiService instance = ApiService._();
   late final Dio _dio;
 
   Future<Either<String, dynamic>> makeRequest({

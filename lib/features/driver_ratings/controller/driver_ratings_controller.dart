@@ -27,7 +27,7 @@ class DriverRatingsController extends GetxController {
   }
 
   Future<void> _loadSummary() async {
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.ratingsSummary,
     );
@@ -54,7 +54,7 @@ class DriverRatingsController extends GetxController {
   }
 
   Future<void> _loadRatings() async {
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.ratings,
     );

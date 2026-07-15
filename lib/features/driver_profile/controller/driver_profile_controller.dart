@@ -16,7 +16,7 @@ class DriverProfileController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.profile,
     );
@@ -55,7 +55,7 @@ class DriverProfileController extends GetxController {
 
   Future<void> logout() async {
     // نُبلغ السيرفر (حذف التوكن) ثم نمسح التخزين المحلي.
-    await ApiService.instance.makeRequest(
+    await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.logout,
     );

@@ -11,6 +11,15 @@ class RideDetailsModel {
   final double commissionAmount;
   final double commissionPercentage;
 
+  /// المبلغ الفعلي الواجب تحصيله من الزبون (بعد الخصم) + قيمة الخصم.
+  final double amountDue;
+  final double discountAmount;
+
+  /// تسعيرة نوع السيارة — نستخدمها لحساب "الأجرة حتى الآن" بنفس معادلة السيرفر
+  /// (base_fare + المسافة × price_per_km).
+  final double baseFare;
+  final double pricePerKm;
+
   final double distanceKm;
   final String pickupAddress;
   final String destinationAddress;
@@ -30,6 +39,10 @@ class RideDetailsModel {
     this.driverEarning = 0,
     this.commissionAmount = 0,
     this.commissionPercentage = 0,
+    this.amountDue = 0,
+    this.discountAmount = 0,
+    this.baseFare = 0,
+    this.pricePerKm = 0,
     required this.distanceKm,
     required this.pickupAddress,
     required this.destinationAddress,
@@ -53,6 +66,13 @@ class RideDetailsModel {
         ? Map<String, dynamic>.from(json['payment'] as Map)
         : null;
 
+    // نوع السيارة قد يأتي مباشرة (car_type) أو داخل السيارة (car.car_type).
+    final car = json['car'] is Map ? Map<String, dynamic>.from(json['car'] as Map) : null;
+    final rawCarType = json['car_type'] ?? car?['car_type'];
+    final carType = rawCarType is Map
+        ? Map<String, dynamic>.from(rawCarType as Map)
+        : null;
+
     return RideDetailsModel(
       id: _toInt(json['id'] ?? json['ride_id']),
       status: (json['status'] ?? '').toString(),
@@ -63,6 +83,10 @@ class RideDetailsModel {
       driverEarning: _toDouble(payment?['driver_earning']),
       commissionAmount: _toDouble(payment?['commission_amount']),
       commissionPercentage: _toDouble(payment?['commission_percentage']),
+      amountDue: _toDouble(payment?['amount']),
+      discountAmount: _toDouble(payment?['discount_amount']),
+      baseFare: _toDouble(carType?['base_fare']),
+      pricePerKm: _toDouble(carType?['price_per_km']),
       distanceKm: _toDouble(json['distance_km'] ?? json['distanceKm']),
       pickupAddress: (json['pickup_address'] ?? json['pickupAddress'] ?? '').toString(),
       destinationAddress: (json['destination_address'] ?? json['destinationAddress'] ?? '').toString(),

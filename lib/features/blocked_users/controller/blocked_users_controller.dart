@@ -17,7 +17,7 @@ class BlockedUsersController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.blocks,
     );
@@ -42,7 +42,7 @@ class BlockedUsersController extends GetxController {
 
   // إلغاء حظر مستخدم ثم إعادة تحميل القائمة عند النجاح.
   Future<void> unblock(int customerId) async {
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.delete,
       endPoint: '${EndPoints.blocks}/$customerId',
     );

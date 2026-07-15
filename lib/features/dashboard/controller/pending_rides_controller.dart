@@ -93,7 +93,7 @@ class PendingRidesController extends GetxController {
       update();
     }
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.pendingRides,
     );

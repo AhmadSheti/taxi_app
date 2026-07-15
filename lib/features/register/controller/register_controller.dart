@@ -28,7 +28,7 @@ class RegisterController extends GetxController {
     update(); // أظهر التحميل
 
     // نرسل الطلب للسيرفر عبر خدمة الاتصال الموحّدة.
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.register,
       body: {
@@ -67,7 +67,7 @@ class RegisterController extends GetxController {
     isLoading = true;
     update();
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.verifyOtp,
       body: {
