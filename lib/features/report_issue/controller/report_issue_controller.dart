@@ -17,7 +17,7 @@ class ReportIssueController extends GetxController {
     isSending = true;
     update();
 
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.reports,
       body: {

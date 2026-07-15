@@ -5,14 +5,23 @@ import '../../../constants.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../controller/login_controller.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final formKey = GlobalKey<FormState>();
+
+  // إظهار/إخفاء كلمة المرور.
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
     // الكنترولر محقون مسبقاً في main (AppBinding)، لذا نستدعيه فقط بـ Get.find.
     final controller = Get.find<LoginController>();
-    final formKey = GlobalKey<FormState>();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -83,11 +92,25 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: controller.passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     textAlign: TextAlign.right,
                     decoration: _inputDecoration(
                       hint: '••••••••',
                       icon: Icons.lock_outline,
+                      suffix: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: AppColors.textSecondary,
+                        ),
+                        tooltip: _obscurePassword
+                            ? 'إظهار كلمة المرور'
+                            : 'إخفاء كلمة المرور',
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                      ),
                     ),
                     validator: (value) =>
                         (value == null || value.isEmpty) ? 'رجاءً أدخل كلمة المرور' : null,
@@ -135,13 +158,18 @@ class LoginScreen extends StatelessWidget {
   }
 
   // تنسيق موحّد لحقول الإدخال (حتى لا نكرّره).
-  InputDecoration _inputDecoration({required String hint, required IconData icon}) {
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
       filled: true,
       fillColor: AppColors.cardWhite,
       prefixIcon: Icon(icon, color: AppColors.primaryTeal),
+      suffixIcon: suffix,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,

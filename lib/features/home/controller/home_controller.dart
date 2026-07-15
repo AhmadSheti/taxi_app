@@ -20,7 +20,7 @@ class HomeController extends GetxController {
   }
 
   Future<void> fetchProfile() async {
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.profile,
     );

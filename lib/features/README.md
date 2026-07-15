@@ -42,14 +42,14 @@ lib/
 1. أضف الرابط في `core/network/api_constants.dart`.
 2. أنشئ مجلد الميزة داخل `features/` وبداخله `model/ controller/ view/`.
 3. في الـ **model**: اكتب `fromJson`.
-4. في الـ **controller**: متغيّراتك + دالة تستدعي `ApiService.instance.makeRequest(...)`، ثم `result.fold(خطأ, نجاح)` مع `update()`.
+4. في الـ **controller**: متغيّراتك + دالة تستدعي `ApiService().makeRequest(...)`، ثم `result.fold(خطأ, نجاح)` مع `update()`.
 5. في الـ **view**: `GetBuilder<Controller>` لعرض الحالة.
 6. أضف الكنترولر في `core/app_binding.dart`.
 
 ## 4) شكل الطلب (نفسه في كل مكان)
 
 ```dart
-final result = await ApiService.instance.makeRequest(
+final result = await ApiService().makeRequest(
   method: ApiMethod.post,          // نوع الطلب
   endPoint: EndPoints.login,       // الرابط
   body: { 'email': ..., 'password': ... },

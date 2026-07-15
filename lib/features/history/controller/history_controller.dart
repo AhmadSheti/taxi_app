@@ -22,7 +22,7 @@ class HistoryController extends GetxController {
   Future<void> fetchRides() async {
     isLoading = true;
     update();
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.rides,
       queryParams: {'status': filter},
@@ -50,7 +50,7 @@ class HistoryController extends GetxController {
     blockingDriverId = driverId;
     update();
 
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.blocks,
       body: {

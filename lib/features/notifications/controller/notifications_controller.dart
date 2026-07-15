@@ -17,7 +17,7 @@ class NotificationsController extends GetxController {
     isLoading = true;
     update(); // أخبر الواجهة أننا بدأنا التحميل
 
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.notifications,
     );
@@ -49,7 +49,7 @@ class NotificationsController extends GetxController {
 
   Future<void> _markAllAsReadSilently() async {
     // لا نعرض رسالة نجاح/خطأ ولا نعيد الجلب — مجرد تحديث الحالة على السيرفر.
-    await ApiService.instance.makeRequest(
+    await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.notificationsReadAll,
     );

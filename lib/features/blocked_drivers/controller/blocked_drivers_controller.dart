@@ -13,7 +13,7 @@ class BlockedDriversController extends GetxController {
   Future<void> fetchBlocked() async {
     isLoading = true;
     update();
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.blocks,
     );
@@ -26,7 +26,7 @@ class BlockedDriversController extends GetxController {
   }
 
   Future<void> unblock(int driverId) async {
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.delete,
       endPoint: EndPoints.unblock(driverId),
     );

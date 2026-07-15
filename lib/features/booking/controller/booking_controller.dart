@@ -14,7 +14,6 @@ import '../../../core/network/api_service.dart';
 /// الوجهة → نوع السيارة → السائق → التأكيد → التتبّع → التقييم.
 /// نسخة واحدة مشتركة (محقونة في AppBinding) تحتفظ بحالة التدفّق كلها.
 class BookingController extends GetxController {
-  final _api = ApiService.instance;
 
   // ─── نقطتا الرحلة (إحداثيات + عنوان) ───
   // قيم افتراضية في دمشق؛ المستخدم يعدّل العنوان النصّي.
@@ -54,7 +53,7 @@ class BookingController extends GetxController {
   Future<void> fetchCarTypes() async {
     loadingCarTypes = true;
     update();
-    final res = await _api.makeRequest(method: ApiMethod.get, endPoint: EndPoints.carTypes);
+    final res = await ApiService().makeRequest(method: ApiMethod.get, endPoint: EndPoints.carTypes);
     loadingCarTypes = false;
     res.fold(_err, (data) {
       final List list = data['data'] ?? [];
@@ -75,7 +74,7 @@ class BookingController extends GetxController {
   // ─── 2) تقدير السعر ───
   Future<void> estimateFare() async {
     if (selectedCarType == null) return;
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.estimate,
       body: {
@@ -95,7 +94,7 @@ class BookingController extends GetxController {
   Future<void> fetchDrivers() async {
     loadingDrivers = true;
     update();
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.availableDrivers,
       queryParams: {
@@ -123,7 +122,7 @@ class BookingController extends GetxController {
     if (code.trim().isEmpty || validatingDiscount) return;
     validatingDiscount = true;
     update();
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.validateDiscount,
       body: {'code': code.trim()},
@@ -156,7 +155,7 @@ class BookingController extends GetxController {
     }
     submitting = true;
     update();
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.rides,
       body: {
@@ -180,7 +179,7 @@ class BookingController extends GetxController {
   // ─── استئناف رحلة نشطة عند فتح/إعادة تشغيل التطبيق ───
   // يرجع معرّف الرحلة النشطة إن وُجدت، وإلا null.
   Future<int?> fetchActiveRide() async {
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.activeRide,
     );
@@ -208,7 +207,7 @@ class BookingController extends GetxController {
   }
 
   Future<void> fetchRide(int rideId) async {
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.rideById(rideId),
     );
@@ -223,7 +222,7 @@ class BookingController extends GetxController {
 
   // ─── 7) إلغاء الرحلة ───
   Future<bool> cancelRide(int rideId, {String? reason}) async {
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.put,
       endPoint: EndPoints.cancelRide(rideId),
       body: {if (reason != null) 'reason': reason},
@@ -238,7 +237,7 @@ class BookingController extends GetxController {
 
   // ─── 8) التقييم ───
   Future<bool> rate(int rideId, int score, String comment) async {
-    final res = await _api.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.rateRide(rideId),
       body: {'score': score, if (comment.isNotEmpty) 'comment': comment},

@@ -19,7 +19,7 @@ class ProfileController extends GetxController {
   Future<void> fetchProfile() async {
     isLoading = true;
     update();
-    final res = await ApiService.instance.makeRequest(
+    final res = await ApiService().makeRequest(
       method: ApiMethod.get,
       endPoint: EndPoints.profile,
     );
@@ -38,7 +38,7 @@ class ProfileController extends GetxController {
 
   Future<void> logout() async {
     // نُخبر السيرفر (اختياري) ثم نحذف التوكن محلياً ونعود لشاشة الترحيب.
-    await ApiService.instance.makeRequest(
+    await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.logout,
     );

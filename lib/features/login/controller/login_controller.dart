@@ -23,7 +23,7 @@ class LoginController extends GetxController {
     update();
 
     // الـ backend يقبل الهاتف أو البريد في حقل phone.
-    final result = await ApiService.instance.makeRequest(
+    final result = await ApiService().makeRequest(
       method: ApiMethod.post,
       endPoint: EndPoints.login,
       body: {
